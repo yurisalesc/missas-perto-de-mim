@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f766e" />
+    <link rel="manifest" href="/public/manifest.webmanifest" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <title>Missa Perto de Mim</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 0; }
+      header { padding: 12px; background: #0f766e; color: #fff; }
+      main { display: grid; grid-template-columns: 2fr 1fr; height: calc(100vh - 64px); }
+      #map { width: 100%; height: 100%; }
+      aside { padding: 10px; overflow: auto; border-left: 1px solid #ddd; }
+      input, select, button { margin: 4px 0; width: 100%; padding: 8px; }
+      li { margin-bottom: 8px; }
+    </style>
+  </head>
+  <body>
+    <header><strong>Missa Perto de Mim</strong></header>
+    <section style="padding:10px;">
+      <input id="city" placeholder="Cidade (opcional)" />
+      <select id="radius">
+        <option value="1">1 km</option>
+        <option value="5">5 km</option>
+        <option value="10" selected>10 km</option>
+        <option value="50">50 km</option>
+      </select>
+      <input id="hours" type="number" min="1" max="168" value="6" />
+      <button id="geo">Usar minha localização</button>
+      <button id="search">Buscar missas</button>
+    </section>
+    <section style="padding:10px; border-top:1px solid #eee;">
+      <strong>Sugerir novo local/correção</strong>
+      <form id="suggestionForm">
+        <input id="sug_nome" placeholder="Nome da igreja" required />
+        <input id="sug_endereco" placeholder="Endereço" required />
+        <input id="sug_cidade" placeholder="Cidade" required />
+        <input id="sug_msg" placeholder="Mensagem (opcional)" />
+        <button type="submit">Enviar sugestão</button>
+      </form>
+      <div id="suggestionStatus" style="margin-top:6px;"></div>
+    </section>
+    <section style="padding:10px; border-top:1px solid #eee;">
+      <strong>Todas as missas</strong>
+      <input id="filtro_igreja" placeholder="Filtrar por nome da igreja" />
+      <button id="listar_todas">Listar todas as missas</button>
+      <ul id="allMasses"></ul>
+    </section>
+    <main>
+      <div id="map"></div>
+      <aside>
+        <ul id="results"></ul>
+      </aside>
+    </main>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+pydantic-settings
+python-multipart
+passlib[argon2,bcrypt]
+pytest
+httpx
+psycopg[binary]
