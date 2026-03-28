@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'self' http://127.0.0.1:8000; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;"
+    />
+    <title>Painel Admin | Missas Perto de Mim</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --card: #fff;
+        --line: #e2e8f0;
+        --text: #0f172a;
+        --muted: #475569;
+        --brand: #0f766e;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      }
+      .container { width: min(1200px, 95vw); margin: 20px auto 36px; }
+      .topbar {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--card);
+      }
+      .topbar h1 { margin: 0; font-size: 20px; }
+      .topbar a { color: var(--brand); text-decoration: none; font-weight: 600; }
+      .layout { display: grid; grid-template-columns: 280px 1fr; gap: 12px; margin-top: 12px; }
+      .card {
+        background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+        padding: 14px; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+      }
+      .card h2 { margin: 0 0 10px; font-size: 16px; }
+      .field { display: grid; gap: 6px; margin: 8px 0; }
+      label { font-size: 12px; color: var(--muted); font-weight: 700; }
+      input, select, button, textarea {
+        width: 100%; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: #fff;
+      }
+      button {
+        border-color: var(--brand); background: var(--brand); color: #fff; cursor: pointer; font-weight: 600;
+      }
+      button.secondary { background: #fff; color: var(--text); border-color: var(--line); }
+      button.danger { background: #b91c1c; border-color: #b91c1c; }
+      .tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+      .tab-btn { background: #fff; color: #0f172a; border-color: var(--line); width: auto; }
+      .tab-btn.active { background: #e6f6f4; color: #0b5f59; border-color: #ccefeb; }
+      .tab-panel { display: none; }
+      .tab-panel.active { display: block; }
+      .status { min-height: 18px; color: #0b5f59; font-size: 13px; margin-top: 8px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { border-bottom: 1px solid var(--line); text-align: left; padding: 8px 6px; vertical-align: top; }
+      th { color: var(--muted); font-weight: 700; }
+      .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .actions { display: flex; gap: 6px; }
+      .actions button { width: auto; padding: 6px 8px; font-size: 12px; }
+      @media (max-width: 1000px) {
+        .layout { grid-template-columns: 1fr; }
+        .grid-2 { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="topbar">
+        <h1>Painel Admin</h1>
+        <a href="/">Voltar para app</a>
+      </div>
+
+      <div class="layout">
+        <aside class="card">
+          <h2>Autenticação</h2>
+          <form id="authForm">
+            <div class="field">
+              <label for="admin_user">Usuário</label>
+              <input id="admin_user" placeholder="admin" required />
+            </div>
+            <div class="field">
+              <label for="admin_pass">Senha</label>
+              <input id="admin_pass" type="password" placeholder="••••••••" required />
+            </div>
+            <button type="submit">Entrar</button>
+            <button type="button" id="logoutBtn" class="secondary" style="margin-top: 8px;">Sair</button>
+          </form>
+          <div id="authStatus" class="status"></div>
+        </aside>
+
+        <main class="card">
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="churches">Igrejas</button>
+            <button class="tab-btn" data-tab="schedules">Horários</button>
+            <button class="tab-btn" data-tab="suggestions">Sugestões</button>
+            <button class="tab-btn" data-tab="import">Importação CSV</button>
+          </div>
+
+          <section id="tab-churches" class="tab-panel active">
+            <h2>Igrejas</h2>
+            <div class="card">
+              <h2 id="churchFormTitle">Criar igreja</h2>
+              <form id="churchForm">
+                <div class="field"><label>Nome</label><input name="nome" required /></div>
+                <div class="field"><label>Endereço</label><input name="endereco" required /></div>
+                <div class="field"><label>Cidade</label><input name="cidade" required /></div>
+                <div class="field"><label>Latitude</label><input name="latitude" type="number" step="any" required /></div>
+                <div class="field"><label>Longitude</label><input name="longitude" type="number" step="any" required /></div>
+                <div class="actions">
+                  <button type="submit" id="churchSubmitBtn">Salvar igreja</button>
+                  <button type="button" id="churchCancelEditBtn" class="secondary">Cancelar edição</button>
+                </div>
+              </form>
+              <div id="churchStatus" class="status"></div>
+            </div>
+            <div class="card" style="margin-top:10px;">
+              <h2>Lista de igrejas</h2>
+              <div class="grid-2">
+                <div class="field">
+                  <label for="churchSearchCity">Filtrar por cidade</label>
+                  <input id="churchSearchCity" placeholder="Ex.: Natal" />
+                </div>
+                <div class="field">
+                  <label for="churchSearchName">Filtrar por nome</label>
+                  <input id="churchSearchName" placeholder="Ex.: Nossa Senhora" />
+                </div>
+              </div>
+              <button id="refreshChurches" type="button" class="secondary">Atualizar</button>
+              <div style="overflow:auto; margin-top: 8px;">
+                <table>
+                  <thead><tr><th>ID</th><th>Nome</th><th>Cidade</th><th>Ações</th></tr></thead>
+                  <tbody id="churchesTbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section id="tab-schedules" class="tab-panel">
+            <h2>Horários</h2>
+            <div class="grid-2">
+              <div class="card">
+                <h2>Criar horário</h2>
+                <form id="scheduleForm">
+                  <div class="field"><label>ID da igreja</label><input name="church_id" type="number" required /></div>
+                  <div class="field"><label>Dia da semana (0-6)</label><input name="dia_semana" type="number" min="0" max="6" required /></div>
+                  <div class="field"><label>Hora</label><input name="horario" type="time" required /></div>
+                  <div class="field"><label>Observação</label><input name="observacao" placeholder="Opcional" /></div>
+                  <button type="submit">Salvar horário</button>
+                </form>
+                <div id="scheduleStatus" class="status"></div>
+              </div>
+              <div class="card">
+                <h2>Lista de horários</h2>
+                <button id="refreshSchedules" type="button" class="secondary">Atualizar</button>
+                <div style="overflow:auto; margin-top:8px;">
+                  <table>
+                    <thead><tr><th>ID</th><th>Igreja</th><th>Dia</th><th>Hora</th><th>Ações</th></tr></thead>
+                    <tbody id="schedulesTbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="tab-suggestions" class="tab-panel">
+            <h2>Sugestões</h2>
+            <button id="refreshSuggestions" class="secondary" type="button">Atualizar</button>
+            <div style="overflow:auto; margin-top:8px;">
+              <table>
+                <thead>
+                  <tr><th>ID</th><th>Status</th><th>Igreja</th><th>Cidade</th><th>Mensagem</th><th>Ações</th></tr>
+                </thead>
+                <tbody id="suggestionsTbody"></tbody>
+              </table>
+            </div>
+            <div id="suggestionStatus" class="status"></div>
+          </section>
+
+          <section id="tab-import" class="tab-panel">
+            <h2>Importação CSV</h2>
+            <form id="csvForm">
+              <div class="field">
+                <label for="csvFile">Arquivo CSV</label>
+                <input id="csvFile" type="file" accept=".csv,text/csv" required />
+              </div>
+              <button type="submit">Importar</button>
+            </form>
+            <div id="csvStatus" class="status"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script type="module" src="/src/admin.js"></script>
+  </body>
+</html>
+

@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f766e" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'self' http://127.0.0.1:8000 https://*.tile.openstreetmap.org https://unpkg.com; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://*.tile.openstreetmap.org https://unpkg.com; worker-src 'self'; manifest-src 'self'"
+    />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <title>Missas Perto de Mim</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --card: #ffffff;
+        --line: #e4e8f0;
+        --text: #0f172a;
+        --muted: #475569;
+        --brand: #0f766e;
+        --brand-soft: #e6f6f4;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        color: var(--text);
+        background: linear-gradient(180deg, #eef7f5 0%, var(--bg) 280px);
+      }
+      .container { width: min(1120px, 94vw); margin: 0 auto; }
+      header { padding: 24px 0 14px; }
+      .brand { display: flex; flex-direction: column; gap: 6px; }
+      .brand h1 { margin: 0; font-size: 28px; line-height: 1.1; }
+      .brand p { margin: 0; color: var(--muted); }
+      .admin-link { margin-top: 6px; font-size: 14px; color: var(--brand); text-decoration: none; font-weight: 600; }
+      .tabs {
+        display: flex;
+        gap: 10px;
+        margin: 10px 0 18px;
+        padding: 6px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fff;
+      }
+      .tab-btn {
+        border: 0;
+        background: transparent;
+        padding: 10px 14px;
+        cursor: pointer;
+        border-radius: 10px;
+        color: #334155;
+        font-weight: 600;
+      }
+      .tab-btn[aria-selected="true"] { background: var(--brand-soft); color: #0b5f59; }
+      .tab-panel { display: none; padding-bottom: 28px; }
+      .tab-panel.active { display: block; }
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+        background: var(--card);
+        box-shadow: 0 8px 30px rgba(15, 23, 42, 0.04);
+      }
+      .card + .card { margin-top: 12px; }
+      .feedback-card { margin-top: 18px !important; }
+      .card h2 { margin: 0 0 4px; font-size: 18px; }
+      .card p { margin: 0 0 10px; color: var(--muted); }
+      .field-row { display: grid; grid-template-columns: 1fr 160px 160px; gap: 10px; }
+      .field { display: grid; gap: 6px; margin: 8px 0; }
+      label { font-size: 12px; color: #334155; font-weight: 700; }
+      input, select, textarea, button {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        padding: 10px 12px;
+        font-size: 14px;
+        background: #fff;
+      }
+      textarea { min-height: 104px; resize: vertical; }
+      button {
+        border-color: var(--brand);
+        background: var(--brand);
+        color: #fff;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button.secondary {
+        background: #fff;
+        border-color: var(--line);
+        color: #0f172a;
+      }
+      .actions { display: flex; gap: 10px; margin-top: 8px; }
+      .actions button { width: auto; min-width: 170px; }
+      .grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }
+      #map { width: 100%; min-height: 500px; border-radius: 14px; }
+      aside { max-height: 500px; overflow: auto; }
+      ul { margin: 8px 0 0; padding-left: 18px; }
+      li { margin-bottom: 7px; color: #1e293b; }
+      .result-line { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; }
+      .result-line button { width: auto; min-width: 120px; padding: 6px 10px; font-size: 12px; }
+      .table-wrap { overflow-x: auto; }
+      .table-wrap.hidden { display: none; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+      th, td { border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; padding: 8px 6px; }
+      th { color: #334155; font-weight: 700; white-space: nowrap; }
+      .empty-message { margin-top: 8px; color: var(--muted); }
+      .status { margin-top: 8px; color: #0b5f59; font-size: 13px; min-height: 18px; }
+      .home-legend { margin: 6px 0 8px; color: #0b5f59; font-weight: 600; font-size: 14px; }
+      footer {
+        margin: 18px 0 26px;
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #ffffffcc;
+        text-align: center;
+        color: #334155;
+        font-size: 14px;
+      }
+      @media (max-width: 900px) {
+        .field-row { grid-template-columns: 1fr; }
+        .actions { flex-direction: column; }
+        .actions button { width: 100%; }
+        #map { min-height: 360px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div class="brand">
+          <h1>Missas Perto de Mim</h1>
+          <p>Encontre missas, filtre por cidade e ajude a melhorar os dados da comunidade.</p>
+        </div>
+      </header>
+
+      <nav class="tabs" role="tablist" aria-label="Seções">
+        <button class="tab-btn" id="tab-home" role="tab" aria-controls="panel-home" aria-selected="true">Home</button>
+        <button class="tab-btn" id="tab-all" role="tab" aria-controls="panel-all" aria-selected="false">Todas as missas</button>
+        <button class="tab-btn" id="tab-now" role="tab" aria-controls="panel-now" aria-selected="false">Acontecendo agora</button>
+      </nav>
+
+      <section id="panel-home" class="tab-panel active" role="tabpanel" aria-labelledby="tab-home">
+        <div class="card feedback-card">
+          <h2>Buscar missas</h2>
+          <p>Use sua localização ou informe cidade para ver os horários mais próximos.</p>
+          <div class="field-row">
+            <div class="field">
+              <label for="city">Cidade (opcional)</label>
+              <input id="city" list="citySuggestions" placeholder="Ex.: Natal" />
+            </div>
+            <div class="field">
+              <label for="radius">Raio</label>
+              <select id="radius">
+                <option value="1">1 km</option>
+                <option value="5">5 km</option>
+                <option value="10" selected>10 km</option>
+                <option value="15">15 km</option>
+                <option value="25">25 km</option>
+                <option value="50">50 km</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="hours">Próximas horas</label>
+              <input id="hours" type="number" min="1" max="168" value="6" placeholder="Ex.: 6" />
+            </div>
+          </div>
+          <div class="actions">
+            <button id="geo" type="button" class="secondary">Usar minha localização</button>
+            <button id="search" type="button">Buscar missas</button>
+          </div>
+        </div>
+
+        <div class="grid">
+          <aside class="card">
+            <h2>Resultados</h2>
+            <div id="homeResultsLegend" class="home-legend"></div>
+            <div id="homeResultsMessage" class="empty-message"></div>
+            <div id="homeResultsTableWrap" class="table-wrap hidden">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Igreja</th>
+                    <th>Cidade</th>
+                    <th>Endereço</th>
+                    <th>Distância</th>
+                    <th>Horários</th>
+                    <th>Mapa</th>
+                  </tr>
+                </thead>
+                <tbody id="resultsTbody"></tbody>
+              </table>
+            </div>
+          </aside>
+          <div id="map" class="card"></div>
+        </div>
+
+        <div class="card feedback-card">
+          <h2>Feedback</h2>
+          <p>Deixe sugestões de mudanças, correções ou pedido para adicionar novas igrejas.</p>
+          <form class="suggestionForm" data-status="#suggestionStatusHome" data-context="home">
+            <div class="field">
+              <label for="feedback_home">Sua mensagem</label>
+              <textarea id="feedback_home" name="mensagem" placeholder="Ex.: adicionar Igreja X, corrigir endereço Y, ajustar horário..." required></textarea>
+            </div>
+            <button type="submit">Enviar feedback</button>
+          </form>
+          <div id="suggestionStatusHome" class="status"></div>
+        </div>
+      </section>
+
+      <section id="panel-all" class="tab-panel" role="tabpanel" aria-labelledby="tab-all">
+        <div class="card feedback-card">
+          <h2>Todas as missas</h2>
+          <p>Filtre por cidade e/ou nome da igreja.</p>
+          <div class="field">
+            <label for="filtro_cidade">Filtrar por cidade</label>
+              <input id="filtro_cidade" list="citySuggestions" placeholder="Ex.: Natal" />
+          </div>
+          <div class="field">
+            <label for="filtro_igreja">Filtrar por nome da igreja</label>
+            <input id="filtro_igreja" placeholder="Ex.: São José" />
+          </div>
+          <button id="listar_todas" type="button">Listar</button>
+          <div class="table-wrap hidden" id="allMassesTableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Cidade</th>
+                  <th>Igreja</th>
+                  <th>Seg</th>
+                  <th>Ter</th>
+                  <th>Qua</th>
+                  <th>Qui</th>
+                  <th>Sex</th>
+                  <th>Sab</th>
+                  <th>Dom</th>
+                </tr>
+              </thead>
+              <tbody id="allMassesTbody"></tbody>
+            </table>
+          </div>
+          <div id="allMassesMessage" class="empty-message">Aplique ao menos um filtro para exibir resultados.</div>
+        </div>
+
+        <div class="card">
+          <h2>Feedback</h2>
+          <p>Viu algo errado na listagem? Envie aqui sua sugestão em uma única mensagem.</p>
+          <form class="suggestionForm" data-status="#suggestionStatusAll" data-context="todas-as-missas">
+            <div class="field">
+              <label for="feedback_all">Sua mensagem</label>
+              <textarea id="feedback_all" name="mensagem" placeholder="Ex.: faltou a paróquia..., horário de domingo está incorreto..." required></textarea>
+            </div>
+            <button type="submit">Enviar feedback</button>
+          </form>
+          <div id="suggestionStatusAll" class="status"></div>
+        </div>
+      </section>
+
+      <section id="panel-now" class="tab-panel" role="tabpanel" aria-labelledby="tab-now">
+        <div class="card">
+          <h2>Acontecendo agora</h2>
+          <p>Filtra apenas por cidade e considera missa em andamento por 1h30.</p>
+          <div class="field-row">
+            <div class="field">
+              <label for="city_now">Cidade</label>
+              <input id="city_now" list="citySuggestions" placeholder="Ex.: Natal" />
+            </div>
+            <div class="field">
+              <label>&nbsp;</label>
+              <button id="search_now" type="button">Buscar agora</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Resultados</h2>
+          <ul id="results_now"></ul>
+        </div>
+
+        <div class="card">
+          <h2>Feedback</h2>
+          <p>Compartilhe melhorias gerais, novas igrejas e ajustes de horário.</p>
+          <form class="suggestionForm" data-status="#suggestionStatusNow" data-context="acontecendo-agora">
+            <div class="field">
+              <label for="feedback_now">Sua mensagem</label>
+              <textarea id="feedback_now" name="mensagem" placeholder="Ex.: incluir igreja..., missa das 19h mudou para 19h30..." required></textarea>
+            </div>
+            <button type="submit">Enviar feedback</button>
+          </form>
+          <div id="suggestionStatusNow" class="status"></div>
+        </div>
+      </section>
+
+      <footer>
+        Feito com amor ❤️ e para Deus ✝️, por Yuri Sales.
+      </footer>
+      <datalist id="citySuggestions"></datalist>
+    </div>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

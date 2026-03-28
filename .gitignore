@@ -1,0 +1,10 @@
+.env
+*.env
+apps/api/.env
+apps/web/.env
+*.db
+__pycache__/
+.pytest_cache/
+apps/web/dist/
+apps/web/.vite/
+node_modules/

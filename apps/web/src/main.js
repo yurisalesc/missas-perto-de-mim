@@ -1,0 +1,381 @@
+import { API_BASE } from "./config.js";
+import { escapeHtml } from "./lib/sanitize.js";
+import { weekdayNamePt } from "./lib/time.js";
+
+let currentCoords = null;
+const citySuggestions = document.getElementById("citySuggestions");
+
+function ensureLeaflet() {
+  if (window.L) return true;
+  alert(
+    "Não foi possível carregar o mapa (Leaflet). " +
+      "Verifique sua internet ou libere o acesso a unpkg.com."
+  );
+  return false;
+}
+
+let map = null;
+if (ensureLeaflet()) {
+  map = L.map("map").setView([-5.7945, -35.211], 12);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap contributors",
+  }).addTo(map);
+}
+
+const markers = [];
+let userLocationMarker = null;
+const resultsTbody = document.getElementById("resultsTbody");
+const homeResultsLegend = document.getElementById("homeResultsLegend");
+const homeResultsMessage = document.getElementById("homeResultsMessage");
+const homeResultsTableWrap = document.getElementById("homeResultsTableWrap");
+const allMassesTbody = document.getElementById("allMassesTbody");
+const allMassesTableWrap = document.getElementById("allMassesTableWrap");
+const allMassesMessage = document.getElementById("allMassesMessage");
+const resultsNowList = document.getElementById("results_now");
+
+function clearMarkers() {
+  markers.forEach((marker) => marker.remove());
+  markers.length = 0;
+}
+
+function fitMarkers() {
+  if (!map || markers.length === 0) return;
+  if (markers.length === 1) {
+    map.setView(markers[0].getLatLng(), 14);
+    return;
+  }
+  const bounds = L.latLngBounds(markers.map((m) => m.getLatLng()));
+  map.fitBounds(bounds, { padding: [20, 20] });
+}
+
+function plotChurches(churches) {
+  clearMarkers();
+  if (!map) return;
+  (churches || []).forEach((church) => {
+    const marker = L.marker([church.latitude, church.longitude]).addTo(map);
+    marker.bindPopup(`${escapeHtml(church.nome)}<br>${escapeHtml(church.endereco)}`);
+    markers.push(marker);
+  });
+  fitMarkers();
+}
+
+function showOnlyChurchOnMap(church) {
+  clearMarkers();
+  if (!map) return;
+  const marker = L.marker([church.latitude, church.longitude]).addTo(map);
+  marker.bindPopup(`${church.nome}<br>${church.endereco}`).openPopup();
+  markers.push(marker);
+  fitMarkers();
+  setActiveTab("tab-home");
+}
+
+function formatOccurrenceHour(occurrenceIso, fallbackHorario) {
+  if (occurrenceIso) {
+    const d = new Date(occurrenceIso);
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+  }
+  return String(fallbackHorario || "").substring(0, 5);
+}
+
+function sortByEarliestOccurrence(churches) {
+  return [...(churches || [])].sort((a, b) => {
+    const aFirst = a?.proximas_missas?.[0]?.ocorrencia_em || "";
+    const bFirst = b?.proximas_missas?.[0]?.ocorrencia_em || "";
+    return aFirst.localeCompare(bFirst);
+  });
+}
+
+function renderChurchResults(targetEl, churches, emptyText) {
+  targetEl.innerHTML = "";
+  if (!Array.isArray(churches) || churches.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = emptyText;
+    targetEl.appendChild(li);
+    return;
+  }
+
+  churches.forEach((church) => {
+    const li = document.createElement("li");
+    const wrapper = document.createElement("div");
+    wrapper.className = "result-line";
+
+    const masses = (church.proximas_missas || [])
+      .map((mass) => `${mass.dia_semana} - ${String(mass.horario).substring(0, 5)}`)
+      .join(", ");
+    const info = document.createElement("span");
+    info.textContent = `${church.nome} | ${church.endereco} | ${church.cidade}${
+      typeof church.distancia_km === "number" ? ` | ${church.distancia_km} km` : ""
+    } | ${masses}`;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = "Ver no mapa";
+    button.addEventListener("click", () => showOnlyChurchOnMap(church));
+
+    wrapper.appendChild(info);
+    wrapper.appendChild(button);
+    li.appendChild(wrapper);
+    targetEl.appendChild(li);
+  });
+}
+
+async function runSearchHome() {
+  const city = document.getElementById("city").value.trim();
+  const radius = document.getElementById("radius").value;
+  const nextHours = document.getElementById("hours").value;
+  const params = new URLSearchParams();
+  params.set("radius_km", radius);
+  params.set("next_hours", nextHours);
+  if (city) params.set("city", city);
+  if (currentCoords) {
+    params.set("lat", String(currentCoords.lat));
+    params.set("lon", String(currentCoords.lon));
+  }
+  const response = await fetch(`${API_BASE}/igrejas/buscar?${params.toString()}`);
+  const payloadRaw = await response.json();
+  const payload = sortByEarliestOccurrence(payloadRaw);
+  resultsTbody.innerHTML = "";
+  homeResultsTableWrap.classList.remove("hidden");
+  homeResultsMessage.textContent = "";
+  if (!Array.isArray(payload) || payload.length === 0) {
+    homeResultsTableWrap.classList.add("hidden");
+    homeResultsLegend.textContent = "";
+    homeResultsMessage.textContent =
+      "Não encontramos missas para esse período agora. Tente aumentar as horas ou ajustar seus filtros.";
+    homeResultsMessage.style.color = "#b91c1c";
+    plotChurches([]);
+    return;
+  }
+
+  const now = new Date();
+  const startDate = new Date(now.getTime() + Number(nextHours) * 60 * 60 * 1000);
+  const windowEndDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+  const startHour = `${String(startDate.getHours()).padStart(2, "0")}:${String(startDate.getMinutes()).padStart(
+    2,
+    "0"
+  )}`;
+  const windowEndHour = `${String(windowEndDate.getHours()).padStart(2, "0")}:${String(
+    windowEndDate.getMinutes()
+  ).padStart(
+    2,
+    "0"
+  )}`;
+  const startWeekday = weekdayNamePt(startDate);
+  homeResultsLegend.textContent = `Missas a partir das ${startHour} de ${startWeekday} até ${windowEndHour}`;
+  homeResultsLegend.style.color = "#0b5f59";
+  homeResultsMessage.textContent = "";
+  payload.forEach((church) => {
+    const tr = document.createElement("tr");
+    const masses = (church.proximas_missas || [])
+      .map((mass) => formatOccurrenceHour(mass.ocorrencia_em, mass.horario))
+      .join(" | ");
+    const btn = `<button type="button" data-map-id="${church.church_id}">Ver no mapa</button>`;
+    tr.innerHTML = `
+      <td>${escapeHtml(church.nome)}</td>
+      <td>${escapeHtml(church.cidade)}</td>
+      <td>${escapeHtml(church.endereco)}</td>
+      <td>${typeof church.distancia_km === "number" ? `${Number(church.distancia_km).toFixed(1)} km` : "-"}</td>
+      <td>${escapeHtml(masses || "-")}</td>
+      <td>${btn}</td>
+    `;
+    tr.querySelector("button").addEventListener("click", () => showOnlyChurchOnMap(church));
+    resultsTbody.appendChild(tr);
+  });
+  plotChurches(payload);
+}
+
+async function runSearchNow() {
+  const city = document.getElementById("city_now").value.trim();
+  const params = new URLSearchParams();
+  if (city) params.set("city", city);
+  const response = await fetch(`${API_BASE}/igrejas/acontecendo-agora?${params.toString()}`);
+  const payloadRaw = await response.json();
+  const payload = sortByEarliestOccurrence(payloadRaw);
+  renderChurchResults(
+    resultsNowList,
+    payload,
+    "Nenhuma missa acontecendo agora para esta cidade."
+  );
+  plotChurches(payload);
+}
+
+document.getElementById("geo").addEventListener("click", () => {
+  if (!navigator.geolocation) {
+    alert("Seu navegador não suporta geolocalização.");
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      currentCoords = {
+        lat: position.coords.latitude,
+        lon: position.coords.longitude,
+      };
+      if (map) {
+        map.setView([currentCoords.lat, currentCoords.lon], 13);
+        if (userLocationMarker) {
+          userLocationMarker.setLatLng([currentCoords.lat, currentCoords.lon]);
+        } else {
+          userLocationMarker = L.circleMarker([currentCoords.lat, currentCoords.lon], {
+            radius: 9,
+            color: "#dc2626",
+            fillColor: "#ef4444",
+            fillOpacity: 0.95,
+            weight: 2,
+          })
+            .addTo(map)
+            .bindPopup("Sua localização");
+        }
+      }
+    },
+    (error) => {
+      alert(
+        `Não foi possível obter sua localização (${error.code}). ` +
+          "Dica: rode o site em http://localhost:5173 ou https e permita o acesso à localização."
+      );
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+});
+
+document.getElementById("search").addEventListener("click", runSearchHome);
+document.getElementById("search_now").addEventListener("click", runSearchNow);
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/src/sw.js");
+}
+
+document.querySelectorAll(".suggestionForm").forEach((form) => {
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const statusSel = form.getAttribute("data-status");
+    const context = form.getAttribute("data-context") || "geral";
+    const statusEl = statusSel ? document.querySelector(statusSel) : null;
+    if (statusEl) statusEl.textContent = "Enviando...";
+    const formData = new FormData(form);
+    const mensagem = String(formData.get("mensagem") || "").trim();
+    const payload = {
+      nome_igreja: "Feedback de usuário",
+      endereco: "Não informado",
+      cidade: "Não informado",
+      mensagem: `[${context}] ${mensagem}` || null,
+    };
+    try {
+      const response = await fetch(`${API_BASE}/sugestoes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      if (statusEl) statusEl.textContent = "Feedback enviado para moderação. Obrigado!";
+      form.reset();
+    } catch (e) {
+      if (statusEl) statusEl.textContent = "Falha ao enviar. Tente novamente.";
+    }
+  });
+});
+
+document.getElementById("listar_todas").addEventListener("click", async () => {
+  allMassesTbody.innerHTML = "";
+  const cidade = document.getElementById("filtro_cidade").value.trim();
+  const nomeIgreja = document.getElementById("filtro_igreja").value.trim();
+  if (!cidade && !nomeIgreja) {
+    allMassesTableWrap.classList.add("hidden");
+    allMassesMessage.textContent = "Aplique ao menos um filtro para exibir resultados.";
+    return;
+  }
+
+  allMassesTableWrap.classList.remove("hidden");
+  allMassesMessage.textContent = "";
+
+  const params = new URLSearchParams();
+  if (cidade) params.set("cidade", cidade);
+  if (nomeIgreja) params.set("nome_igreja", nomeIgreja);
+  const response = await fetch(`${API_BASE}/missas/todas?${params.toString()}`);
+  const payload = await response.json();
+  if (!Array.isArray(payload) || payload.length === 0) {
+    allMassesTableWrap.classList.add("hidden");
+    allMassesMessage.textContent = "Nenhuma missa encontrada para os filtros informados.";
+    return;
+  }
+
+  const grouped = new Map();
+  payload.forEach((item) => {
+    const key = `${item.cidade}||${item.nome_igreja}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        cidade: item.cidade,
+        nome_igreja: item.nome_igreja,
+        dias: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] },
+      });
+    }
+    grouped.get(key).dias[item.dia_semana].push(String(item.horario).substring(0, 5));
+  });
+
+  const sortTimes = (times) =>
+    [...new Set(times)].sort((a, b) => {
+      const [ah, am] = a.split(":").map(Number);
+      const [bh, bm] = b.split(":").map(Number);
+      return ah * 60 + am - (bh * 60 + bm);
+    });
+
+  Array.from(grouped.values()).forEach((row) => {
+    for (let i = 0; i <= 6; i += 1) {
+      row.dias[i] = sortTimes(row.dias[i]);
+    }
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(row.cidade)}</td>
+      <td>${escapeHtml(row.nome_igreja)}</td>
+      <td>${escapeHtml(row.dias[0].join(", ") || "-")}</td>
+      <td>${escapeHtml(row.dias[1].join(", ") || "-")}</td>
+      <td>${escapeHtml(row.dias[2].join(", ") || "-")}</td>
+      <td>${escapeHtml(row.dias[3].join(", ") || "-")}</td>
+      <td>${escapeHtml(row.dias[4].join(", ") || "-")}</td>
+      <td>${escapeHtml(row.dias[5].join(", ") || "-")}</td>
+      <td>${escapeHtml(row.dias[6].join(", ") || "-")}</td>
+    `;
+    allMassesTbody.appendChild(tr);
+  });
+});
+
+async function loadCitySuggestions(query = "") {
+  const params = new URLSearchParams();
+  if (query) params.set("q", query);
+  params.set("limit", "20");
+  const response = await fetch(`${API_BASE}/igrejas/cidades?${params.toString()}`);
+  if (!response.ok) return;
+  const cities = await response.json();
+  citySuggestions.innerHTML = "";
+  (cities || []).forEach((city) => {
+    const option = document.createElement("option");
+    option.value = city;
+    citySuggestions.appendChild(option);
+  });
+}
+
+["city", "filtro_cidade", "city_now"].forEach((id) => {
+  const input = document.getElementById(id);
+  input.addEventListener("input", () => loadCitySuggestions(input.value.trim()));
+  input.addEventListener("focus", () => loadCitySuggestions(input.value.trim()));
+});
+loadCitySuggestions();
+
+function setActiveTab(tabId) {
+  const tabs = [
+    { btn: document.getElementById("tab-home"), panel: document.getElementById("panel-home") },
+    { btn: document.getElementById("tab-all"), panel: document.getElementById("panel-all") },
+    { btn: document.getElementById("tab-now"), panel: document.getElementById("panel-now") },
+  ];
+  tabs.forEach(({ btn, panel }) => {
+    const active = btn.id === tabId;
+    btn.setAttribute("aria-selected", active ? "true" : "false");
+    panel.classList.toggle("active", active);
+  });
+}
+
+document.getElementById("tab-home").addEventListener("click", () => setActiveTab("tab-home"));
+document.getElementById("tab-all").addEventListener("click", () => setActiveTab("tab-all"));
+document.getElementById("tab-now").addEventListener("click", () => setActiveTab("tab-now"));
