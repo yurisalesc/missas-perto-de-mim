@@ -36,6 +36,8 @@ def schedule_to_item(schedule) -> MassListingOut:
         dia_semana=schedule.dia_semana,
         horario=schedule.horario.isoformat(timespec="minutes"),
         observacao=schedule.observacao,
+        telefone=schedule.church.telefone,
+        redes_sociais_site=schedule.church.redes_sociais_site,
     )
 
 

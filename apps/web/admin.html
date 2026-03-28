@@ -108,6 +108,9 @@
                 <div class="field"><label>Cidade</label><input name="cidade" required /></div>
                 <div class="field"><label>Latitude</label><input name="latitude" type="number" step="any" required /></div>
                 <div class="field"><label>Longitude</label><input name="longitude" type="number" step="any" required /></div>
+                <div class="field"><label>Telefone</label><input name="telefone" placeholder="Ex.: (84) 99999-9999" /></div>
+                <div class="field"><label>Redes sociais / Site</label><input name="redes_sociais_site" placeholder="Ex.: @paroquia ou dominio.com.br" /></div>
+                <div class="field"><label>Observação</label><input name="observacao" placeholder="Ex.: Sede Arquidiocesana" /></div>
                 <div class="actions">
                   <button type="submit" id="churchSubmitBtn">Salvar igreja</button>
                   <button type="button" id="churchCancelEditBtn" class="secondary">Cancelar edição</button>
@@ -130,7 +133,7 @@
               <button id="refreshChurches" type="button" class="secondary">Atualizar</button>
               <div style="overflow:auto; margin-top: 8px;">
                 <table>
-                  <thead><tr><th>ID</th><th>Nome</th><th>Cidade</th><th>Ações</th></tr></thead>
+                  <thead><tr><th>ID</th><th>Nome</th><th>Cidade</th><th>Telefone</th><th>Redes/Site</th><th>Ações</th></tr></thead>
                   <tbody id="churchesTbody"></tbody>
                 </table>
               </div>

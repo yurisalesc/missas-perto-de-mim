@@ -19,6 +19,19 @@ MAX_CSV_SIZE_BYTES = 2 * 1024 * 1024
 REQUIRED_COLUMNS = {"nome", "endereco", "cidade", "latitude", "longitude"}
 
 
+def read_optional(row: dict, *keys: str) -> str | None:
+    """Return first non-empty optional value for candidate keys."""
+
+    for key in keys:
+        value = row.get(key)
+        if value is None:
+            continue
+        text_value = str(value).strip()
+        if text_value and text_value != "-":
+            return text_value
+    return None
+
+
 @router.post("/importacao/csv")
 async def import_churches_csv(file: UploadFile = File(...), db: Session = Depends(get_db)) -> dict:
     content = await file.read()
@@ -47,6 +60,11 @@ async def import_churches_csv(file: UploadFile = File(...), db: Session = Depend
                     cidade=str(row["cidade"]).strip(),
                     latitude=float(row["latitude"]),
                     longitude=float(row["longitude"]),
+                    telefone=read_optional(row, "telefone", "Telefone"),
+                    redes_sociais_site=read_optional(
+                        row, "redes_sociais_site", "redes sociais/site", "Redes Sociais/Site"
+                    ),
+                    observacao=read_optional(row, "observacao", "Observação", "flags", "Flags"),
                 )
             except (TypeError, ValueError) as exc:
                 raise HTTPException(status_code=400, detail="Invalid church row in CSV") from exc

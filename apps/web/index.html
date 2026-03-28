@@ -58,7 +58,7 @@
         font-weight: 600;
       }
       .tab-btn[aria-selected="true"] { background: var(--brand-soft); color: #0b5f59; }
-      .tab-panel { display: none; padding-bottom: 28px; }
+      .tab-panel { display: none; padding-bottom: 12px; }
       .tab-panel.active { display: block; }
       .card {
         border: 1px solid var(--line);
@@ -97,6 +97,12 @@
       }
       .actions { display: flex; gap: 10px; margin-top: 8px; }
       .actions button { width: auto; min-width: 170px; }
+      .location-status {
+        margin-top: 8px;
+        font-size: 13px;
+        color: #0b5f59;
+      }
+      .location-status.muted { color: var(--muted); }
       .grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }
       #map { width: 100%; min-height: 500px; border-radius: 14px; }
       aside { max-height: 500px; overflow: auto; }
@@ -109,11 +115,44 @@
       table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
       th, td { border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; padding: 8px 6px; }
       th { color: #334155; font-weight: 700; white-space: nowrap; }
+      .table-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+      }
+      .table-actions button {
+        width: auto;
+        min-width: 0;
+        padding: 5px 9px;
+        font-size: 12px;
+      }
       .empty-message { margin-top: 8px; color: var(--muted); }
       .status { margin-top: 8px; color: #0b5f59; font-size: 13px; min-height: 18px; }
       .home-legend { margin: 6px 0 8px; color: #0b5f59; font-weight: 600; font-size: 14px; }
+      .info-row td {
+        background: #f8fafc;
+        border-bottom: 1px solid var(--line);
+      }
+      .info-box {
+        font-size: 13px;
+        color: #1e293b;
+        line-height: 1.5;
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        margin-right: 6px;
+        margin-bottom: 6px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+      }
       footer {
-        margin: 18px 0 26px;
+        margin: 8px 0 26px;
         padding: 14px 16px;
         border: 1px solid var(--line);
         border-radius: 14px;
@@ -122,10 +161,24 @@
         color: #334155;
         font-size: 14px;
       }
+      footer a {
+        color: var(--brand);
+        text-decoration: none;
+        font-weight: 700;
+      }
+      footer a:hover { text-decoration: underline; }
       @media (max-width: 900px) {
         .field-row { grid-template-columns: 1fr; }
         .actions { flex-direction: column; }
         .actions button { width: 100%; }
+        .table-actions {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 8px;
+        }
+        .table-actions button {
+          width: 100%;
+        }
         #map { min-height: 360px; }
       }
     </style>
@@ -172,7 +225,11 @@
           </div>
           <div class="actions">
             <button id="geo" type="button" class="secondary">Usar minha localização</button>
+            <button id="clear_geo" type="button" class="secondary">Limpar localização</button>
             <button id="search" type="button">Buscar missas</button>
+          </div>
+          <div id="locationStatus" class="location-status muted">
+            Você pode combinar cidade + localização para refinar os resultados.
           </div>
         </div>
 
@@ -190,7 +247,7 @@
                     <th>Endereço</th>
                     <th>Distância</th>
                     <th>Horários</th>
-                    <th>Mapa</th>
+                    <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody id="resultsTbody"></tbody>
@@ -240,6 +297,7 @@
                   <th>Sex</th>
                   <th>Sab</th>
                   <th>Dom</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody id="allMassesTbody"></tbody>
@@ -298,7 +356,7 @@
       </section>
 
       <footer>
-        Feito com amor ❤️ e para Deus ✝️, por Yuri Sales.
+        Feito com amor ❤️ e para Deus ✝️, por <a href="https://github.com/yurisalesc" target="_blank" rel="noopener noreferrer">Yuri Sales</a>.
       </footer>
       <datalist id="citySuggestions"></datalist>
     </div>

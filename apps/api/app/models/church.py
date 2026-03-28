@@ -17,5 +17,8 @@ class Church(Base):
     cidade: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
     longitude: Mapped[float] = mapped_column(Float, nullable=False)
+    telefone: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    redes_sociais_site: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    observacao: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     horarios = relationship("MassSchedule", back_populates="church", cascade="all, delete-orphan")

@@ -13,6 +13,8 @@ class MassListingOut(BaseModel):
     dia_semana: int
     horario: str
     observacao: str | None
+    telefone: str | None = None
+    redes_sociais_site: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

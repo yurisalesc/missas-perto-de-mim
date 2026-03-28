@@ -63,6 +63,9 @@ class SearchService:
                     latitude=church.latitude,
                     longitude=church.longitude,
                     distancia_km=round(distance if distance is not None else 0.0, 3),
+                    telefone=church.telefone,
+                    redes_sociais_site=church.redes_sociais_site,
+                    observacao=church.observacao,
                     proximas_missas=response_masses,
                 )
             )
@@ -100,6 +103,9 @@ class SearchService:
                     latitude=church.latitude,
                     longitude=church.longitude,
                     distancia_km=0.0,
+                    telefone=church.telefone,
+                    redes_sociais_site=church.redes_sociais_site,
+                    observacao=church.observacao,
                     proximas_missas=response_masses,
                 )
             )

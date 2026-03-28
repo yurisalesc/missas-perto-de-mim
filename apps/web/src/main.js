@@ -29,6 +29,7 @@ const resultsTbody = document.getElementById("resultsTbody");
 const homeResultsLegend = document.getElementById("homeResultsLegend");
 const homeResultsMessage = document.getElementById("homeResultsMessage");
 const homeResultsTableWrap = document.getElementById("homeResultsTableWrap");
+const locationStatus = document.getElementById("locationStatus");
 const allMassesTbody = document.getElementById("allMassesTbody");
 const allMassesTableWrap = document.getElementById("allMassesTableWrap");
 const allMassesMessage = document.getElementById("allMassesMessage");
@@ -78,6 +79,32 @@ function formatOccurrenceHour(occurrenceIso, fallbackHorario) {
     return `${hh}:${mm}`;
   }
   return String(fallbackHorario || "").substring(0, 5);
+}
+
+function getContactInfo(church) {
+  const fallback = "Não informado";
+  const telefone = church?.telefone || fallback;
+  const redesSociaisSite = church?.redes_sociais_site || fallback;
+  const observacao = church?.observacao || church?.proximas_missas?.[0]?.observacao || fallback;
+  return { telefone, redesSociaisSite, observacao };
+}
+
+function updateLocationStatus() {
+  if (!locationStatus) return;
+  const hasCoords = Boolean(currentCoords);
+  const city = document.getElementById("city").value.trim();
+  if (hasCoords && city) {
+    locationStatus.textContent = "Filtro ativo: cidade + sua localização.";
+    locationStatus.classList.remove("muted");
+    return;
+  }
+  if (hasCoords) {
+    locationStatus.textContent = "Filtro ativo: sua localização.";
+    locationStatus.classList.remove("muted");
+    return;
+  }
+  locationStatus.textContent = "Você pode combinar cidade + localização para refinar os resultados.";
+  locationStatus.classList.add("muted");
 }
 
 function sortByEarliestOccurrence(churches) {
@@ -152,19 +179,12 @@ async function runSearchHome() {
 
   const now = new Date();
   const startDate = new Date(now.getTime() + Number(nextHours) * 60 * 60 * 1000);
-  const windowEndDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
   const startHour = `${String(startDate.getHours()).padStart(2, "0")}:${String(startDate.getMinutes()).padStart(
     2,
     "0"
   )}`;
-  const windowEndHour = `${String(windowEndDate.getHours()).padStart(2, "0")}:${String(
-    windowEndDate.getMinutes()
-  ).padStart(
-    2,
-    "0"
-  )}`;
   const startWeekday = weekdayNamePt(startDate);
-  homeResultsLegend.textContent = `Missas a partir das ${startHour} de ${startWeekday} até ${windowEndHour}`;
+  homeResultsLegend.textContent = `Missas a partir das ${startHour} de ${startWeekday}`;
   homeResultsLegend.style.color = "#0b5f59";
   homeResultsMessage.textContent = "";
   payload.forEach((church) => {
@@ -172,16 +192,39 @@ async function runSearchHome() {
     const masses = (church.proximas_missas || [])
       .map((mass) => formatOccurrenceHour(mass.ocorrencia_em, mass.horario))
       .join(" | ");
-    const btn = `<button type="button" data-map-id="${church.church_id}">Ver no mapa</button>`;
+    const mapBtn = `<button type="button" data-map-id="${church.church_id}">Ver no mapa</button>`;
+    const infoBtn = `<button type="button" data-info-id="${church.church_id}" class="secondary">Info</button>`;
     tr.innerHTML = `
       <td>${escapeHtml(church.nome)}</td>
       <td>${escapeHtml(church.cidade)}</td>
       <td>${escapeHtml(church.endereco)}</td>
       <td>${typeof church.distancia_km === "number" ? `${Number(church.distancia_km).toFixed(1)} km` : "-"}</td>
       <td>${escapeHtml(masses || "-")}</td>
-      <td>${btn}</td>
+      <td><div class="table-actions">${mapBtn}${infoBtn}</div></td>
     `;
     tr.querySelector("button").addEventListener("click", () => showOnlyChurchOnMap(church));
+    const infoButton = tr.querySelector('[data-info-id]');
+    infoButton.addEventListener("click", () => {
+      const existing = resultsTbody.querySelector(`tr[data-info-for="${church.church_id}"]`);
+      if (existing) {
+        existing.remove();
+        return;
+      }
+      const infoRow = document.createElement("tr");
+      infoRow.className = "info-row";
+      infoRow.setAttribute("data-info-for", String(church.church_id));
+      const contact = getContactInfo(church);
+      infoRow.innerHTML = `
+        <td colspan="6">
+          <div class="info-box">
+            <div><strong>Telefone:</strong> ${escapeHtml(contact.telefone)}</div>
+            <div><strong>Redes sociais / Site:</strong> ${escapeHtml(contact.redesSociaisSite)}</div>
+            <div><strong>Observação:</strong> ${escapeHtml(contact.observacao)}</div>
+          </div>
+        </td>
+      `;
+      tr.insertAdjacentElement("afterend", infoRow);
+    });
     resultsTbody.appendChild(tr);
   });
   plotChurches(payload);
@@ -229,6 +272,7 @@ document.getElementById("geo").addEventListener("click", () => {
             .bindPopup("Sua localização");
         }
       }
+      updateLocationStatus();
     },
     (error) => {
       alert(
@@ -238,6 +282,15 @@ document.getElementById("geo").addEventListener("click", () => {
     },
     { enableHighAccuracy: true, timeout: 10000 }
   );
+});
+
+document.getElementById("clear_geo").addEventListener("click", () => {
+  currentCoords = null;
+  if (userLocationMarker) {
+    userLocationMarker.remove();
+    userLocationMarker = null;
+  }
+  updateLocationStatus();
 });
 
 document.getElementById("search").addEventListener("click", runSearchHome);
@@ -308,10 +361,17 @@ document.getElementById("listar_todas").addEventListener("click", async () => {
       grouped.set(key, {
         cidade: item.cidade,
         nome_igreja: item.nome_igreja,
+        telefone: item.telefone || null,
+        redes_sociais_site: item.redes_sociais_site || null,
+        observacao: item.observacao || null,
         dias: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] },
       });
     }
-    grouped.get(key).dias[item.dia_semana].push(String(item.horario).substring(0, 5));
+    const current = grouped.get(key);
+    current.dias[item.dia_semana].push(String(item.horario).substring(0, 5));
+    if (!current.telefone && item.telefone) current.telefone = item.telefone;
+    if (!current.redes_sociais_site && item.redes_sociais_site) current.redes_sociais_site = item.redes_sociais_site;
+    if (!current.observacao && item.observacao) current.observacao = item.observacao;
   });
 
   const sortTimes = (times) =>
@@ -326,6 +386,7 @@ document.getElementById("listar_todas").addEventListener("click", async () => {
       row.dias[i] = sortTimes(row.dias[i]);
     }
     const tr = document.createElement("tr");
+    const infoBtn = `<button type="button" class="secondary" data-all-info="1">Info</button>`;
     tr.innerHTML = `
       <td>${escapeHtml(row.cidade)}</td>
       <td>${escapeHtml(row.nome_igreja)}</td>
@@ -336,7 +397,27 @@ document.getElementById("listar_todas").addEventListener("click", async () => {
       <td>${escapeHtml(row.dias[4].join(", ") || "-")}</td>
       <td>${escapeHtml(row.dias[5].join(", ") || "-")}</td>
       <td>${escapeHtml(row.dias[6].join(", ") || "-")}</td>
+      <td><div class="table-actions">${infoBtn}</div></td>
     `;
+    tr.querySelector('[data-all-info="1"]').addEventListener("click", () => {
+      const existing = tr.nextElementSibling;
+      if (existing && existing.classList.contains("info-row")) {
+        existing.remove();
+        return;
+      }
+      const infoRow = document.createElement("tr");
+      infoRow.className = "info-row";
+      infoRow.innerHTML = `
+        <td colspan="10">
+          <div class="info-box">
+            <div><strong>Telefone:</strong> ${escapeHtml(row.telefone || "Não informado")}</div>
+            <div><strong>Redes sociais / Site:</strong> ${escapeHtml(row.redes_sociais_site || "Não informado")}</div>
+            <div><strong>Observação:</strong> ${escapeHtml(row.observacao || "Não informado")}</div>
+          </div>
+        </td>
+      `;
+      tr.insertAdjacentElement("afterend", infoRow);
+    });
     allMassesTbody.appendChild(tr);
   });
 });
@@ -361,7 +442,9 @@ async function loadCitySuggestions(query = "") {
   input.addEventListener("input", () => loadCitySuggestions(input.value.trim()));
   input.addEventListener("focus", () => loadCitySuggestions(input.value.trim()));
 });
+document.getElementById("city").addEventListener("input", updateLocationStatus);
 loadCitySuggestions();
+updateLocationStatus();
 
 function setActiveTab(tabId) {
   const tabs = [

@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import app.models
 from app.core.config import settings
 from app.db.base import Base
+from app.db.migrations import ensure_church_contact_columns
 from app.db.session import engine
 from app.routers import admin, masses, search, suggestions
 
@@ -31,6 +32,7 @@ def on_startup() -> None:
     """Initialize database tables."""
 
     Base.metadata.create_all(bind=engine)
+    ensure_church_contact_columns(engine)
 
 
 @app.get("/health")

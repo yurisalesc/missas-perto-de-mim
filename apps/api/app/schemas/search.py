@@ -25,6 +25,9 @@ class SearchResultChurch(BaseModel):
     latitude: float
     longitude: float
     distancia_km: float
+    telefone: str | None = None
+    redes_sociais_site: str | None = None
+    observacao: str | None = None
     proximas_missas: list[SearchResultMass]
 
 

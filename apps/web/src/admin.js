@@ -62,6 +62,8 @@ async function refreshChurches() {
       <td>${church.id}</td>
       <td>${escapeHtml(church.nome)}</td>
       <td>${escapeHtml(church.cidade)}</td>
+      <td>${escapeHtml(church.telefone || "-")}</td>
+      <td>${escapeHtml(church.redes_sociais_site || "-")}</td>
       <td class="actions">
         <button data-action="edit" data-id="${church.id}" class="secondary">Editar</button>
         <button data-action="delete" data-id="${church.id}" class="danger">Excluir</button>
@@ -98,6 +100,9 @@ function startChurchEdit(churchId) {
   form.elements.cidade.value = church.cidade || "";
   form.elements.latitude.value = church.latitude ?? "";
   form.elements.longitude.value = church.longitude ?? "";
+  form.elements.telefone.value = church.telefone || "";
+  form.elements.redes_sociais_site.value = church.redes_sociais_site || "";
+  form.elements.observacao.value = church.observacao || "";
   document.getElementById("churchFormTitle").textContent = `Editar igreja #${church.id}`;
   document.getElementById("churchSubmitBtn").textContent = "Salvar alterações";
 }
@@ -216,6 +221,9 @@ function setupForms() {
       cidade: String(data.get("cidade") || "").trim(),
       latitude: Number(data.get("latitude")),
       longitude: Number(data.get("longitude")),
+      telefone: String(data.get("telefone") || "").trim() || null,
+      redes_sociais_site: String(data.get("redes_sociais_site") || "").trim() || null,
+      observacao: String(data.get("observacao") || "").trim() || null,
     };
     if (!payload.nome || !payload.endereco || !payload.cidade) {
       setStatus("churchStatus", "Preencha nome, endereco e cidade.", true);

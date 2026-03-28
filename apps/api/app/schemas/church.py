@@ -11,6 +11,9 @@ class ChurchBase(BaseModel):
     cidade: str = Field(min_length=2, max_length=100)
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
+    telefone: str | None = Field(default=None, max_length=60)
+    redes_sociais_site: str | None = Field(default=None, max_length=255)
+    observacao: str | None = Field(default=None, max_length=255)
 
 
 class ChurchCreate(ChurchBase):
@@ -25,6 +28,9 @@ class ChurchUpdate(BaseModel):
     cidade: str | None = Field(default=None, min_length=2, max_length=100)
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
+    telefone: str | None = Field(default=None, max_length=60)
+    redes_sociais_site: str | None = Field(default=None, max_length=255)
+    observacao: str | None = Field(default=None, max_length=255)
 
 
 class ChurchOut(ChurchBase):
