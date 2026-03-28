@@ -1,6 +1,6 @@
 ![status](https://img.shields.io/badge/status-ativo-0f766e) ![stack](https://img.shields.io/badge/stack-FastAPI%20%7C%20PostgreSQL%20%7C%20Vite-2563eb) ![contribuições](https://img.shields.io/badge/contribui%C3%A7%C3%B5es-bem--vindas-16a34a)
 
-# Missas Perto de Mim 🙏:church:
+# Missas Perto de Mim 🙏⛪
 
 Encontre missas com mais facilidade, por cidade e por proximidade, em uma experiência simples e direta.
 
