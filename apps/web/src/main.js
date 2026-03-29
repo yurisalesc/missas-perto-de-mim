@@ -285,10 +285,7 @@ document.getElementById("geo").addEventListener("click", () => {
       updateLocationStatus();
     },
     (error) => {
-      alert(
-        `Não foi possível obter sua localização (${error.code}). ` +
-          "Dica: rode o site em http://localhost:5173 ou https e permita o acesso à localização."
-      );
+      alert("Não foi possível obter sua localização. Verifique as permissões e tente novamente.");
     },
     { enableHighAccuracy: true, timeout: 10000 }
   );

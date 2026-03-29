@@ -4,6 +4,7 @@ import { escapeHtml } from "./lib/sanitize.js";
 let auth = { user: "", pass: "" };
 let churchesCache = [];
 let editingChurchId = null;
+let churchesRefreshRequestId = 0;
 
 function clearAuth() {
   auth = { user: "", pass: "" };
@@ -48,6 +49,7 @@ function setupTabs() {
 async function refreshChurches() {
   const tbody = document.getElementById("churchesTbody");
   tbody.innerHTML = "";
+  const requestId = ++churchesRefreshRequestId;
   const city = document.getElementById("churchSearchCity").value.trim();
   const name = document.getElementById("churchSearchName").value.trim();
   const params = new URLSearchParams();
@@ -55,6 +57,8 @@ async function refreshChurches() {
   if (name) params.set("nome", name);
   const path = params.toString() ? `/admin/igrejas?${params.toString()}` : "/admin/igrejas";
   const items = await apiFetch(path);
+  // Ignore stale async responses to avoid duplicate render after fast typing.
+  if (requestId !== churchesRefreshRequestId) return;
   churchesCache = items;
   items.forEach((church) => {
     const tr = document.createElement("tr");
