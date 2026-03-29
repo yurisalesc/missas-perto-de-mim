@@ -34,6 +34,8 @@ const allMassesTbody = document.getElementById("allMassesTbody");
 const allMassesTableWrap = document.getElementById("allMassesTableWrap");
 const allMassesMessage = document.getElementById("allMassesMessage");
 const resultsNowList = document.getElementById("results_now");
+const cityByStateSection = document.getElementById("cityByStateSection");
+const cityByStateContent = document.getElementById("cityByStateContent");
 
 function clearMarkers() {
   markers.forEach((marker) => marker.remove());
@@ -107,6 +109,14 @@ function updateLocationStatus() {
   locationStatus.classList.add("muted");
 }
 
+function applyAllMassesDayColumnVisibility(selectedDay) {
+  const dayColumns = document.querySelectorAll(".day-col");
+  dayColumns.forEach((cell) => {
+    const keepVisible = selectedDay === "" || cell.classList.contains(`day-${selectedDay}`);
+    cell.style.display = keepVisible ? "" : "none";
+  });
+}
+
 function sortByEarliestOccurrence(churches) {
   return [...(churches || [])].sort((a, b) => {
     const aFirst = a?.proximas_missas?.[0]?.ocorrencia_em || "";
@@ -178,7 +188,7 @@ async function runSearchHome() {
   }
 
   const now = new Date();
-  const startDate = new Date(now.getTime() + Number(nextHours) * 60 * 60 * 1000);
+  const startDate = now;
   const startHour = `${String(startDate.getHours()).padStart(2, "0")}:${String(startDate.getMinutes()).padStart(
     2,
     "0"
@@ -334,7 +344,8 @@ document.getElementById("listar_todas").addEventListener("click", async () => {
   allMassesTbody.innerHTML = "";
   const cidade = document.getElementById("filtro_cidade").value.trim();
   const nomeIgreja = document.getElementById("filtro_igreja").value.trim();
-  if (!cidade && !nomeIgreja) {
+  const diaSemana = document.getElementById("filtro_dia_semana").value;
+  if (!cidade && !nomeIgreja && diaSemana === "") {
     allMassesTableWrap.classList.add("hidden");
     allMassesMessage.textContent = "Aplique ao menos um filtro para exibir resultados.";
     return;
@@ -346,6 +357,7 @@ document.getElementById("listar_todas").addEventListener("click", async () => {
   const params = new URLSearchParams();
   if (cidade) params.set("cidade", cidade);
   if (nomeIgreja) params.set("nome_igreja", nomeIgreja);
+  if (diaSemana !== "") params.set("dia_semana", diaSemana);
   const response = await fetch(`${API_BASE}/missas/todas?${params.toString()}`);
   const payload = await response.json();
   if (!Array.isArray(payload) || payload.length === 0) {
@@ -390,13 +402,13 @@ document.getElementById("listar_todas").addEventListener("click", async () => {
     tr.innerHTML = `
       <td>${escapeHtml(row.cidade)}</td>
       <td>${escapeHtml(row.nome_igreja)}</td>
-      <td>${escapeHtml(row.dias[0].join(", ") || "-")}</td>
-      <td>${escapeHtml(row.dias[1].join(", ") || "-")}</td>
-      <td>${escapeHtml(row.dias[2].join(", ") || "-")}</td>
-      <td>${escapeHtml(row.dias[3].join(", ") || "-")}</td>
-      <td>${escapeHtml(row.dias[4].join(", ") || "-")}</td>
-      <td>${escapeHtml(row.dias[5].join(", ") || "-")}</td>
-      <td>${escapeHtml(row.dias[6].join(", ") || "-")}</td>
+      <td class="day-col day-0">${escapeHtml(row.dias[0].join(", ") || "-")}</td>
+      <td class="day-col day-1">${escapeHtml(row.dias[1].join(", ") || "-")}</td>
+      <td class="day-col day-2">${escapeHtml(row.dias[2].join(", ") || "-")}</td>
+      <td class="day-col day-3">${escapeHtml(row.dias[3].join(", ") || "-")}</td>
+      <td class="day-col day-4">${escapeHtml(row.dias[4].join(", ") || "-")}</td>
+      <td class="day-col day-5">${escapeHtml(row.dias[5].join(", ") || "-")}</td>
+      <td class="day-col day-6">${escapeHtml(row.dias[6].join(", ") || "-")}</td>
       <td><div class="table-actions">${infoBtn}</div></td>
     `;
     tr.querySelector('[data-all-info="1"]').addEventListener("click", () => {
@@ -420,6 +432,7 @@ document.getElementById("listar_todas").addEventListener("click", async () => {
     });
     allMassesTbody.appendChild(tr);
   });
+  applyAllMassesDayColumnVisibility(diaSemana);
 });
 
 async function loadCitySuggestions(query = "") {
@@ -437,6 +450,23 @@ async function loadCitySuggestions(query = "") {
   });
 }
 
+async function loadCitiesByStateSection() {
+  if (!cityByStateContent) return;
+  const response = await fetch(`${API_BASE}/igrejas/cidades-por-estado`);
+  if (!response.ok) return;
+  const groups = await response.json();
+  cityByStateContent.innerHTML = "";
+  Object.entries(groups || {}).forEach(([state, cities]) => {
+    const block = document.createElement("div");
+    block.className = "city-state-block";
+    block.innerHTML = `
+      <div class="city-state-title">${escapeHtml(state)}</div>
+      <div class="city-state-list">${escapeHtml((cities || []).join(" | "))}</div>
+    `;
+    cityByStateContent.appendChild(block);
+  });
+}
+
 ["city", "filtro_cidade", "city_now"].forEach((id) => {
   const input = document.getElementById(id);
   input.addEventListener("input", () => loadCitySuggestions(input.value.trim()));
@@ -444,6 +474,7 @@ async function loadCitySuggestions(query = "") {
 });
 document.getElementById("city").addEventListener("input", updateLocationStatus);
 loadCitySuggestions();
+loadCitiesByStateSection();
 updateLocationStatus();
 
 function setActiveTab(tabId) {
@@ -451,8 +482,10 @@ function setActiveTab(tabId) {
     { btn: document.getElementById("tab-home"), panel: document.getElementById("panel-home") },
     { btn: document.getElementById("tab-all"), panel: document.getElementById("panel-all") },
     { btn: document.getElementById("tab-now"), panel: document.getElementById("panel-now") },
+    { btn: document.getElementById("tab-confessions"), panel: document.getElementById("panel-confessions") },
   ];
   tabs.forEach(({ btn, panel }) => {
+    if (!btn || !panel) return;
     const active = btn.id === tabId;
     btn.setAttribute("aria-selected", active ? "true" : "false");
     panel.classList.toggle("active", active);
@@ -462,3 +495,16 @@ function setActiveTab(tabId) {
 document.getElementById("tab-home").addEventListener("click", () => setActiveTab("tab-home"));
 document.getElementById("tab-all").addEventListener("click", () => setActiveTab("tab-all"));
 document.getElementById("tab-now").addEventListener("click", () => setActiveTab("tab-now"));
+document.getElementById("toggleCitiesButton").addEventListener("click", () => {
+  if (!cityByStateSection) return;
+  cityByStateSection.classList.toggle("hidden");
+});
+document.getElementById("filtro_dia_semana").addEventListener("change", (event) => {
+  applyAllMassesDayColumnVisibility(event.target.value);
+});
+
+document.getElementById("addCityCta").addEventListener("click", (event) => {
+  event.preventDefault();
+  setActiveTab("tab-home");
+  document.getElementById("feedback_home").scrollIntoView({ behavior: "smooth", block: "start" });
+});

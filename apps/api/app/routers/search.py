@@ -51,6 +51,13 @@ def suggest_cities(
     return ChurchRepository(db).list_cities(query_text=q, limit=max(1, min(limit, 50)))
 
 
+@router.get("/cidades-por-estado", response_model=dict[str, list[str]])
+def list_cities_by_state(db: Session = Depends(get_db)) -> dict[str, list[str]]:
+    """Return available cities grouped by state."""
+
+    return ChurchRepository(db).list_cities_by_state()
+
+
 @router.get("/acontecendo-agora", response_model=list[SearchResultChurch])
 def happening_now(
     city: str | None = None,

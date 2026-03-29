@@ -29,8 +29,8 @@ class SearchService:
 
         churches = self.church_repository.list_with_schedules(city=city)
         results: list[SearchResultChurch] = []
-        base_time = now + timedelta(hours=next_hours)
-        window_hours = 2
+        base_time = now
+        window_hours = next_hours
 
         for church in churches:
             distance = None

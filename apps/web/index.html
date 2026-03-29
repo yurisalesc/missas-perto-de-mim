@@ -58,6 +58,16 @@
         font-weight: 600;
       }
       .tab-btn[aria-selected="true"] { background: var(--brand-soft); color: #0b5f59; }
+      .tab-btn[disabled] {
+        cursor: not-allowed;
+        opacity: 0.65;
+      }
+      .soon-tag {
+        margin-left: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #0369a1;
+      }
       .tab-panel { display: none; padding-bottom: 12px; }
       .tab-panel.active { display: block; }
       .card {
@@ -131,6 +141,42 @@
       .empty-message { margin-top: 8px; color: var(--muted); }
       .status { margin-top: 8px; color: #0b5f59; font-size: 13px; min-height: 18px; }
       .home-legend { margin: 6px 0 8px; color: #0b5f59; font-weight: 600; font-size: 14px; }
+      .cities-highlight {
+        margin-top: 10px;
+      }
+      .city-toggle-btn {
+        border: 0;
+        background: transparent;
+        color: #0b5f59;
+        border-radius: 0;
+        width: auto;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 0;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+      .city-toggle-btn:hover { color: #0a4f4a; }
+      .city-by-state {
+        margin-top: 10px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        padding: 12px;
+      }
+      .city-by-state.hidden { display: none; }
+      .city-state-block + .city-state-block { margin-top: 10px; }
+      .city-state-title { font-weight: 700; margin-bottom: 4px; color: #0f172a; }
+      .city-state-list { color: #334155; font-size: 14px; }
+      .cities-cta {
+        margin-top: 8px;
+      }
+      .cities-cta a {
+        font-weight: 700;
+        color: #0b5f59;
+        text-decoration: none;
+      }
+      .cities-cta a:hover { text-decoration: underline; }
       .info-row td {
         background: #f8fafc;
         border-bottom: 1px solid var(--line);
@@ -190,12 +236,22 @@
           <h1>Missas Perto de Mim</h1>
           <p>Encontre missas, filtre por cidade e ajude a melhorar os dados da comunidade.</p>
         </div>
+        <div class="cities-highlight">
+          <button type="button" id="toggleCitiesButton" class="city-toggle-btn"><strong>Veja se a sua cidade já está cadastrada</strong></button>
+        </div>
+        <div id="cityByStateSection" class="city-by-state hidden">
+          <div id="cityByStateContent"></div>
+        </div>
+        <div class="cities-cta">
+          <a href="#feedback_home" id="addCityCta">Quer ver a sua cidade no site?</a>
+        </div>
       </header>
 
       <nav class="tabs" role="tablist" aria-label="Seções">
         <button class="tab-btn" id="tab-home" role="tab" aria-controls="panel-home" aria-selected="true">Home</button>
         <button class="tab-btn" id="tab-all" role="tab" aria-controls="panel-all" aria-selected="false">Todas as missas</button>
         <button class="tab-btn" id="tab-now" role="tab" aria-controls="panel-now" aria-selected="false">Acontecendo agora</button>
+        <button class="tab-btn" id="tab-confessions" role="tab" aria-controls="panel-confessions" aria-selected="false" disabled>Confissões <span class="soon-tag">em breve</span></button>
       </nav>
 
       <section id="panel-home" class="tab-panel active" role="tabpanel" aria-labelledby="tab-home">
@@ -219,7 +275,7 @@
               </select>
             </div>
             <div class="field">
-              <label for="hours">Próximas horas</label>
+              <label for="hours">Nas próximas horas</label>
               <input id="hours" type="number" min="1" max="168" value="6" placeholder="Ex.: 6" />
             </div>
           </div>
@@ -283,6 +339,19 @@
             <label for="filtro_igreja">Filtrar por nome da igreja</label>
             <input id="filtro_igreja" placeholder="Ex.: São José" />
           </div>
+          <div class="field">
+            <label for="filtro_dia_semana">Filtrar por dia da semana</label>
+            <select id="filtro_dia_semana">
+              <option value="">Todos os dias</option>
+              <option value="0">Segunda-feira</option>
+              <option value="1">Terça-feira</option>
+              <option value="2">Quarta-feira</option>
+              <option value="3">Quinta-feira</option>
+              <option value="4">Sexta-feira</option>
+              <option value="5">Sábado</option>
+              <option value="6">Domingo</option>
+            </select>
+          </div>
           <button id="listar_todas" type="button">Listar</button>
           <div class="table-wrap hidden" id="allMassesTableWrap">
             <table>
@@ -290,13 +359,13 @@
                 <tr>
                   <th>Cidade</th>
                   <th>Igreja</th>
-                  <th>Seg</th>
-                  <th>Ter</th>
-                  <th>Qua</th>
-                  <th>Qui</th>
-                  <th>Sex</th>
-                  <th>Sab</th>
-                  <th>Dom</th>
+                    <th class="day-col day-0">Seg</th>
+                    <th class="day-col day-1">Ter</th>
+                    <th class="day-col day-2">Qua</th>
+                    <th class="day-col day-3">Qui</th>
+                    <th class="day-col day-4">Sex</th>
+                    <th class="day-col day-5">Sab</th>
+                    <th class="day-col day-6">Dom</th>
                   <th>Ações</th>
                 </tr>
               </thead>
@@ -317,6 +386,13 @@
             <button type="submit">Enviar feedback</button>
           </form>
           <div id="suggestionStatusAll" class="status"></div>
+        </div>
+      </section>
+
+      <section id="panel-confessions" class="tab-panel" role="tabpanel" aria-labelledby="tab-confessions">
+        <div class="card">
+          <h2>Confissões</h2>
+          <p><strong>Em breve.</strong> Estamos preparando esta funcionalidade para você.</p>
         </div>
       </section>
 

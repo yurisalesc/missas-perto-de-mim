@@ -21,3 +21,13 @@ def normalize_search_token(value: str) -> str:
     normalized = re.sub(r"\s+", " ", normalized)
     return normalized.casefold()
 
+
+def normalize_city_name(value: str) -> str:
+    """Canonicalize known city abbreviations/nicknames."""
+
+    raw = (value or "").strip()
+    normalized = normalize_search_token(raw)
+    if normalized in {"s g amarante", "s g do amarante", "sg amarante"}:
+        return "São Gonçalo do Amarante"
+    return raw
+

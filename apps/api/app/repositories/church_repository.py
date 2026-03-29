@@ -44,6 +44,19 @@ class ChurchRepository:
         result = self.db.execute(query.limit(limit))
         return [row[0] for row in result.all() if row[0]]
 
+    def list_cities_by_state(self) -> dict[str, list[str]]:
+        """Return city names grouped by state and sorted alphabetically."""
+
+        query = select(distinct(Church.estado), Church.cidade)
+        result = self.db.execute(query).all()
+        grouped: dict[str, set[str]] = {}
+        for state, city in result:
+            if not city:
+                continue
+            state_value = (state or "RN").strip().upper() or "RN"
+            grouped.setdefault(state_value, set()).add(city.strip())
+        return {state: sorted(values) for state, values in sorted(grouped.items(), key=lambda item: item[0])}
+
     def create(self, church: Church) -> Church:
         """Persist a new church."""
 

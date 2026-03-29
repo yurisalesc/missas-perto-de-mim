@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.security import require_admin
-from app.core.text_normalization import expand_nossa_senhora
+from app.core.text_normalization import expand_nossa_senhora, normalize_city_name
 from app.db.session import get_db
 from app.models.church import Church
 from app.models.mass_schedule import MassSchedule
@@ -57,7 +57,8 @@ async def import_churches_csv(file: UploadFile = File(...), db: Session = Depend
                 church = Church(
                     nome=expand_nossa_senhora(str(row["nome"]).strip()),
                     endereco=str(row["endereco"]).strip(),
-                    cidade=str(row["cidade"]).strip(),
+                    cidade=normalize_city_name(str(row["cidade"]).strip()),
+                    estado=read_optional(row, "estado", "Estado"),
                     latitude=float(row["latitude"]),
                     longitude=float(row["longitude"]),
                     telefone=read_optional(row, "telefone", "Telefone"),
