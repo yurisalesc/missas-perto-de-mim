@@ -40,7 +40,8 @@
       .brand p { margin: 0; color: var(--muted); }
       .admin-link { margin-top: 6px; font-size: 14px; color: var(--brand); text-decoration: none; font-weight: 600; }
       .tabs {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 10px;
         margin: 10px 0 18px;
         padding: 6px;
@@ -56,6 +57,13 @@
         border-radius: 10px;
         color: #334155;
         font-weight: 600;
+        width: 100%;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        line-height: 1.2;
       }
       .tab-btn[aria-selected="true"] { background: var(--brand-soft); color: #0b5f59; }
       .tab-btn[disabled] {
@@ -63,10 +71,11 @@
         opacity: 0.65;
       }
       .soon-tag {
-        margin-left: 6px;
-        font-size: 11px;
+        margin-top: 3px;
+        font-size: 10px;
         font-weight: 700;
         color: #0369a1;
+        display: block;
       }
       .tab-panel { display: none; padding-bottom: 12px; }
       .tab-panel.active { display: block; }
@@ -214,6 +223,20 @@
       }
       footer a:hover { text-decoration: underline; }
       @media (max-width: 900px) {
+        .tabs {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 6px;
+          padding: 4px;
+        }
+        .tab-btn {
+          width: 100%;
+          padding: 9px 12px;
+          font-size: 13px;
+          white-space: normal;
+          display: flex;
+          flex-direction: column;
+        }
         .field-row { grid-template-columns: 1fr; }
         .actions { flex-direction: column; }
         .actions button { width: 100%; }
