@@ -33,7 +33,9 @@ const locationStatus = document.getElementById("locationStatus");
 const allMassesTbody = document.getElementById("allMassesTbody");
 const allMassesTableWrap = document.getElementById("allMassesTableWrap");
 const allMassesMessage = document.getElementById("allMassesMessage");
-const resultsNowList = document.getElementById("results_now");
+const resultsNowTbody = document.getElementById("resultsNowTbody");
+const nowResultsTableWrap = document.getElementById("nowResultsTableWrap");
+const nowResultsMessage = document.getElementById("nowResultsMessage");
 const cityByStateSection = document.getElementById("cityByStateSection");
 const cityByStateContent = document.getElementById("cityByStateContent");
 
@@ -125,38 +127,45 @@ function sortByEarliestOccurrence(churches) {
   });
 }
 
-function renderChurchResults(targetEl, churches, emptyText) {
-  targetEl.innerHTML = "";
-  if (!Array.isArray(churches) || churches.length === 0) {
-    const li = document.createElement("li");
-    li.textContent = emptyText;
-    targetEl.appendChild(li);
-    return;
-  }
-
-  churches.forEach((church) => {
-    const li = document.createElement("li");
-    const wrapper = document.createElement("div");
-    wrapper.className = "result-line";
-
-    const masses = (church.proximas_missas || [])
-      .map((mass) => `${mass.dia_semana} - ${String(mass.horario).substring(0, 5)}`)
-      .join(", ");
-    const info = document.createElement("span");
-    info.textContent = `${church.nome} | ${church.endereco} | ${church.cidade}${
-      typeof church.distancia_km === "number" ? ` | ${church.distancia_km} km` : ""
-    } | ${masses}`;
-
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = "Ver no mapa";
-    button.addEventListener("click", () => showOnlyChurchOnMap(church));
-
-    wrapper.appendChild(info);
-    wrapper.appendChild(button);
-    li.appendChild(wrapper);
-    targetEl.appendChild(li);
+function appendChurchResultRow(targetTbody, church) {
+  const tr = document.createElement("tr");
+  const masses = (church.proximas_missas || [])
+    .map((mass) => formatOccurrenceHour(mass.ocorrencia_em, mass.horario))
+    .join(" | ");
+  const mapBtn = `<button type="button" data-map-id="${church.church_id}">Ver no mapa</button>`;
+  const infoBtn = `<button type="button" data-info-id="${church.church_id}" class="secondary">Info</button>`;
+  tr.innerHTML = `
+    <td>${escapeHtml(church.nome)}</td>
+    <td>${escapeHtml(church.cidade)}</td>
+    <td>${escapeHtml(church.endereco)}</td>
+    <td>${typeof church.distancia_km === "number" ? `${Number(church.distancia_km).toFixed(1)} km` : "-"}</td>
+    <td>${escapeHtml(masses || "-")}</td>
+    <td><div class="table-actions">${mapBtn}${infoBtn}</div></td>
+  `;
+  tr.querySelector("button").addEventListener("click", () => showOnlyChurchOnMap(church));
+  const infoButton = tr.querySelector('[data-info-id]');
+  infoButton.addEventListener("click", () => {
+    const existing = targetTbody.querySelector(`tr[data-info-for="${church.church_id}"]`);
+    if (existing) {
+      existing.remove();
+      return;
+    }
+    const infoRow = document.createElement("tr");
+    infoRow.className = "info-row";
+    infoRow.setAttribute("data-info-for", String(church.church_id));
+    const contact = getContactInfo(church);
+    infoRow.innerHTML = `
+      <td colspan="6">
+        <div class="info-box">
+          <div><strong>Telefone:</strong> ${escapeHtml(contact.telefone)}</div>
+          <div><strong>Redes sociais / Site:</strong> ${escapeHtml(contact.redesSociaisSite)}</div>
+          <div><strong>Observação:</strong> ${escapeHtml(contact.observacao)}</div>
+        </div>
+      </td>
+    `;
+    tr.insertAdjacentElement("afterend", infoRow);
   });
+  targetTbody.appendChild(tr);
 }
 
 async function runSearchHome() {
@@ -197,46 +206,7 @@ async function runSearchHome() {
   homeResultsLegend.textContent = `Missas a partir das ${startHour} de ${startWeekday}`;
   homeResultsLegend.style.color = "#0b5f59";
   homeResultsMessage.textContent = "";
-  payload.forEach((church) => {
-    const tr = document.createElement("tr");
-    const masses = (church.proximas_missas || [])
-      .map((mass) => formatOccurrenceHour(mass.ocorrencia_em, mass.horario))
-      .join(" | ");
-    const mapBtn = `<button type="button" data-map-id="${church.church_id}">Ver no mapa</button>`;
-    const infoBtn = `<button type="button" data-info-id="${church.church_id}" class="secondary">Info</button>`;
-    tr.innerHTML = `
-      <td>${escapeHtml(church.nome)}</td>
-      <td>${escapeHtml(church.cidade)}</td>
-      <td>${escapeHtml(church.endereco)}</td>
-      <td>${typeof church.distancia_km === "number" ? `${Number(church.distancia_km).toFixed(1)} km` : "-"}</td>
-      <td>${escapeHtml(masses || "-")}</td>
-      <td><div class="table-actions">${mapBtn}${infoBtn}</div></td>
-    `;
-    tr.querySelector("button").addEventListener("click", () => showOnlyChurchOnMap(church));
-    const infoButton = tr.querySelector('[data-info-id]');
-    infoButton.addEventListener("click", () => {
-      const existing = resultsTbody.querySelector(`tr[data-info-for="${church.church_id}"]`);
-      if (existing) {
-        existing.remove();
-        return;
-      }
-      const infoRow = document.createElement("tr");
-      infoRow.className = "info-row";
-      infoRow.setAttribute("data-info-for", String(church.church_id));
-      const contact = getContactInfo(church);
-      infoRow.innerHTML = `
-        <td colspan="6">
-          <div class="info-box">
-            <div><strong>Telefone:</strong> ${escapeHtml(contact.telefone)}</div>
-            <div><strong>Redes sociais / Site:</strong> ${escapeHtml(contact.redesSociaisSite)}</div>
-            <div><strong>Observação:</strong> ${escapeHtml(contact.observacao)}</div>
-          </div>
-        </td>
-      `;
-      tr.insertAdjacentElement("afterend", infoRow);
-    });
-    resultsTbody.appendChild(tr);
-  });
+  payload.forEach((church) => appendChurchResultRow(resultsTbody, church));
   plotChurches(payload);
 }
 
@@ -247,11 +217,17 @@ async function runSearchNow() {
   const response = await fetch(`${API_BASE}/igrejas/acontecendo-agora?${params.toString()}`);
   const payloadRaw = await response.json();
   const payload = sortByEarliestOccurrence(payloadRaw);
-  renderChurchResults(
-    resultsNowList,
-    payload,
-    "Nenhuma missa acontecendo agora para esta cidade."
-  );
+  resultsNowTbody.innerHTML = "";
+  nowResultsTableWrap.classList.remove("hidden");
+  nowResultsMessage.textContent = "";
+  if (!Array.isArray(payload) || payload.length === 0) {
+    nowResultsTableWrap.classList.add("hidden");
+    nowResultsMessage.textContent = "Nenhuma missa acontecendo agora para esta cidade.";
+    nowResultsMessage.style.color = "#b91c1c";
+    plotChurches([]);
+    return;
+  }
+  payload.forEach((church) => appendChurchResultRow(resultsNowTbody, church));
   plotChurches(payload);
 }
 

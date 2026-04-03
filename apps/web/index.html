@@ -437,7 +437,22 @@
 
         <div class="card">
           <h2>Resultados</h2>
-          <ul id="results_now"></ul>
+          <div id="nowResultsMessage" class="empty-message"></div>
+          <div id="nowResultsTableWrap" class="table-wrap hidden">
+            <table>
+              <thead>
+                <tr>
+                  <th>Igreja</th>
+                  <th>Cidade</th>
+                  <th>Endereço</th>
+                  <th>Distância</th>
+                  <th>Horários</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="resultsNowTbody"></tbody>
+            </table>
+          </div>
         </div>
 
         <div class="card">
