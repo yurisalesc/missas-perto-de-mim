@@ -32,10 +32,12 @@
       .topbar h1 { margin: 0; font-size: 20px; }
       .topbar a { color: var(--brand); text-decoration: none; font-weight: 600; }
       .layout { display: grid; grid-template-columns: 280px 1fr; gap: 12px; margin-top: 12px; }
+      .layout.unauthenticated { grid-template-columns: min(420px, 100%); justify-content: center; }
       .card {
         background: var(--card); border: 1px solid var(--line); border-radius: 14px;
         padding: 14px; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
       }
+      .hidden { display: none !important; }
       .card h2 { margin: 0 0 10px; font-size: 16px; }
       .field { display: grid; gap: 6px; margin: 8px 0; }
       label { font-size: 12px; color: var(--muted); font-weight: 700; }
@@ -72,7 +74,7 @@
         <a href="/">Voltar para app</a>
       </div>
 
-      <div class="layout">
+      <div class="layout unauthenticated" id="adminLayout">
         <aside class="card">
           <h2>Autenticação</h2>
           <form id="authForm">
@@ -90,7 +92,7 @@
           <div id="authStatus" class="status"></div>
         </aside>
 
-        <main class="card">
+        <main id="adminMain" class="card hidden">
           <div class="tabs">
             <button class="tab-btn active" data-tab="churches">Igrejas</button>
             <button class="tab-btn" data-tab="schedules">Horários</button>
