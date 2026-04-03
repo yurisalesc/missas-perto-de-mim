@@ -5,9 +5,33 @@ let auth = { user: "", pass: "" };
 let churchesCache = [];
 let editingChurchId = null;
 let churchesRefreshRequestId = 0;
+const adminLayout = document.getElementById("adminLayout");
+const adminMain = document.getElementById("adminMain");
+
+function setAuthenticatedState(isAuthenticated) {
+  if (adminMain) adminMain.classList.toggle("hidden", !isAuthenticated);
+  if (adminLayout) adminLayout.classList.toggle("unauthenticated", !isAuthenticated);
+}
 
 function clearAuth() {
   auth = { user: "", pass: "" };
+}
+
+function clearAdminUi() {
+  churchesCache = [];
+  editingChurchId = null;
+  churchesRefreshRequestId += 1;
+  document.getElementById("churchesTbody").innerHTML = "";
+  document.getElementById("schedulesTbody").innerHTML = "";
+  document.getElementById("suggestionsTbody").innerHTML = "";
+  document.getElementById("churchSearchCity").value = "";
+  document.getElementById("churchSearchName").value = "";
+  document.getElementById("scheduleForm").reset();
+  document.getElementById("csvForm").reset();
+  resetChurchForm();
+  ["churchStatus", "scheduleStatus", "suggestionStatus", "csvStatus", "exportStatus"].forEach((id) => {
+    setStatus(id, "");
+  });
 }
 
 function setStatus(id, text, isError = false) {
@@ -200,6 +224,7 @@ async function bootstrapData() {
 }
 
 function setupAuth() {
+  setAuthenticatedState(false);
   document.getElementById("admin_user").value = auth.user || "";
   document.getElementById("admin_pass").value = auth.pass || "";
 
@@ -209,15 +234,19 @@ function setupAuth() {
     auth.pass = document.getElementById("admin_pass").value;
     try {
       await apiFetch("/admin/igrejas");
+      setAuthenticatedState(true);
       setStatus("authStatus", "Autenticado com sucesso.");
       bootstrapData();
     } catch (e) {
+      setAuthenticatedState(false);
       setStatus("authStatus", `Falha no login: ${e.message}`, true);
     }
   });
 
   document.getElementById("logoutBtn").addEventListener("click", () => {
     clearAuth();
+    setAuthenticatedState(false);
+    clearAdminUi();
     document.getElementById("admin_user").value = "";
     document.getElementById("admin_pass").value = "";
     setStatus("authStatus", "Credenciais removidas.");
