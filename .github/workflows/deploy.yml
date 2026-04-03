@@ -1,0 +1,51 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            set -euo pipefail
+
+            APP_DIR="${{ secrets.VPS_APP_DIR }}"
+            if [ -z "$APP_DIR" ]; then
+              APP_DIR="/opt/missas-perto-de-mim"
+            fi
+
+            cd "$APP_DIR"
+            git pull --ff-only origin main
+
+            docker compose up -d --build api db
+            docker compose restart api
+
+            docker run --rm -v "$PWD/apps/web:/app" -w /app node:22-bookworm bash -lc "npx --yes vite build"
+            mkdir -p /var/www/missas
+            rm -rf /var/www/missas/*
+            cp -r apps/web/dist/* /var/www/missas/
+            mkdir -p /var/www/missas/src
+            cp apps/web/admin.html /var/www/missas/admin.html
+            cp -r apps/web/src/* /var/www/missas/src/
+            sed -i 's|http://127.0.0.1:8000|/api|g' /var/www/missas/src/config.js
+
+            chown -R www-data:www-data /var/www/missas || true
+            chmod -R 755 /var/www/missas
+            nginx -t
+            systemctl reload nginx
