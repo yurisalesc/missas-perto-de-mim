@@ -183,14 +183,26 @@
 
           <section id="tab-import" class="tab-panel">
             <h2>Importação CSV</h2>
-            <form id="csvForm">
-              <div class="field">
-                <label for="csvFile">Arquivo CSV</label>
-                <input id="csvFile" type="file" accept=".csv,text/csv" required />
-              </div>
-              <button type="submit">Importar</button>
-            </form>
-            <div id="csvStatus" class="status"></div>
+            <div class="card">
+              <h2>Exportar banco</h2>
+              <p style="margin: 0 0 10px; color: #475569;">Baixa um CSV com os dados atuais de igrejas e horários.</p>
+              <button id="exportCsvBtn" type="button" class="secondary">Exportar e baixar CSV</button>
+              <div id="exportStatus" class="status"></div>
+            </div>
+            <div class="card" style="margin-top:10px;">
+              <h2>Importar e popular banco</h2>
+              <form id="csvForm">
+                <div class="field">
+                  <label for="csvFile">Arquivo CSV</label>
+                  <input id="csvFile" type="file" accept=".csv,text/csv" required />
+                </div>
+                <div class="field">
+                  <label><input id="replaceExisting" type="checkbox" checked /> Substituir dados atuais (recomendado)</label>
+                </div>
+                <button type="submit">Importar e popular banco</button>
+              </form>
+              <div id="csvStatus" class="status"></div>
+            </div>
           </section>
         </main>
       </div>

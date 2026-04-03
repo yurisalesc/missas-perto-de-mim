@@ -33,6 +33,15 @@ async function apiFetch(path, options = {}) {
   return response.json();
 }
 
+async function apiDownload(path) {
+  const response = await fetch(`${API_BASE}${path}`, { headers: authHeader() });
+  if (!response.ok) {
+    const txt = await response.text();
+    throw new Error(txt || `HTTP ${response.status}`);
+  }
+  return response.blob();
+}
+
 function setupTabs() {
   const buttons = document.querySelectorAll(".tab-btn");
   buttons.forEach((btn) => {
@@ -282,6 +291,7 @@ function setupForms() {
   document.getElementById("csvForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     const file = document.getElementById("csvFile").files[0];
+    const replaceExisting = document.getElementById("replaceExisting").checked;
     if (!file) {
       setStatus("csvStatus", "Selecione um arquivo CSV.", true);
       return;
@@ -289,7 +299,10 @@ function setupForms() {
     const form = new FormData();
     form.append("file", file);
     try {
-      const data = await apiFetch("/admin/importacao/csv", { method: "POST", body: form });
+      const data = await apiFetch(`/admin/importacao/csv/popular?replace_existing=${replaceExisting}`, {
+        method: "POST",
+        body: form,
+      });
       setStatus(
         "csvStatus",
         `Importado. Igrejas: ${data.created_churches || 0}, horarios: ${data.created_schedules || 0}.`
@@ -298,6 +311,23 @@ function setupForms() {
       refreshSchedules();
     } catch (e) {
       setStatus("csvStatus", `Erro na importacao: ${e.message}`, true);
+    }
+  });
+
+  document.getElementById("exportCsvBtn").addEventListener("click", async () => {
+    try {
+      const blob = await apiDownload("/admin/exportacao/csv");
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "missas_export.csv";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setStatus("exportStatus", "CSV exportado com sucesso.");
+    } catch (e) {
+      setStatus("exportStatus", `Erro ao exportar: ${e.message}`, true);
     }
   });
 }
