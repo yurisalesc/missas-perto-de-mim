@@ -33,7 +33,7 @@ jobs:
             cd "$APP_DIR"
             git pull --ff-only origin main
 
-            docker compose up -d --build api db
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --remove-orphans api db
             docker compose restart api
 
             docker run --rm -v "$PWD/apps/web:/app" -w /app node:22-bookworm bash -lc "npx --yes vite build"
