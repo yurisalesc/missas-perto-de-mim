@@ -33,6 +33,15 @@ jobs:
             cd "$APP_DIR"
             git pull --ff-only origin main
 
+            # Remove stale Docker containers that still hold required host ports.
+            for PORT in 8000 5432; do
+              CONTAINERS="$(docker ps --filter "publish=${PORT}" --format '{{.ID}}')"
+              if [ -n "$CONTAINERS" ]; then
+                echo "Stopping containers using host port ${PORT}: $CONTAINERS"
+                docker rm -f $CONTAINERS
+              fi
+            done
+
             docker compose -f docker-compose.prod.yml up -d --build --remove-orphans api db
             docker compose -f docker-compose.prod.yml restart api
 
