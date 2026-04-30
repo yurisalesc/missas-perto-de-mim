@@ -45,10 +45,11 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d --build --remove-orphans api db
             docker compose -f docker-compose.prod.yml restart api
 
-            docker run --rm -v "$PWD/apps/web:/app" -w /app node:22-bookworm bash -lc "npx --yes vite build"
             mkdir -p /var/www/missas
             rm -rf /var/www/missas/*
-            cp -r apps/web/dist/* /var/www/missas/
+            tar -C "$APP_DIR/apps/web" -cf - . \
+              | docker run --rm -i -w /app node:22-bookworm bash -lc "set -euo pipefail; mkdir -p /app; tar -xf - -C /app; npx --yes vite build; tar -C /app/dist -cf - ." \
+              | tar -C /var/www/missas -xf -
             mkdir -p /var/www/missas/src
             cp apps/web/admin.html /var/www/missas/admin.html
             cp -r apps/web/src/* /var/www/missas/src/
