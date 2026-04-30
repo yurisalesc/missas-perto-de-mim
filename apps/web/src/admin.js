@@ -448,7 +448,7 @@ function setupForms() {
       title: String(data.get("title") || "").trim(),
       description: String(data.get("description") || "").trim(),
       badge: String(data.get("badge") || "").trim(),
-      published_at: publishedAtRaw ? new Date(publishedAtRaw).toISOString() : null,
+      published_at: publishedAtRaw || null,
     };
     if (!payload.title || !payload.description || !payload.badge) {
       setStatus("changelogStatus", "Preencha título, descrição e badge.", true);

@@ -1,11 +1,14 @@
 """Changelog repository."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.changelog import ChangelogEntry
+
+_FORTALEZA_TZ = ZoneInfo("America/Fortaleza")
 
 
 class ChangelogRepository:
@@ -19,7 +22,7 @@ class ChangelogRepository:
     def list_last_days(self, days: int) -> list[ChangelogEntry]:
         """Return entries published in the last N days."""
 
-        cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
+        cutoff = datetime.now(_FORTALEZA_TZ).replace(tzinfo=None) - timedelta(days=days)
         query = (
             select(ChangelogEntry)
             .where(ChangelogEntry.published_at >= cutoff)

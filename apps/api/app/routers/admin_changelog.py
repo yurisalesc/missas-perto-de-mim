@@ -1,6 +1,7 @@
 """Admin endpoints for changelog CRUD."""
 
-from datetime import UTC, datetime
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -12,6 +13,20 @@ from app.repositories.changelog_repository import ChangelogRepository
 from app.schemas.changelog import ChangelogCreate, ChangelogOut, ChangelogUpdate
 
 router = APIRouter(dependencies=[Depends(require_admin)])
+
+_FORTALEZA_TZ = ZoneInfo("America/Fortaleza")
+
+
+def _to_naive_local(dt: datetime) -> datetime:
+    """Convert datetime to naive local (Fortaleza) datetime.
+
+    If *dt* is timezone-aware it is converted to America/Fortaleza first.
+    Naive datetimes are assumed to already represent Fortaleza local time
+    and are returned unchanged.
+    """
+    if dt.tzinfo is not None:
+        return dt.astimezone(_FORTALEZA_TZ).replace(tzinfo=None)
+    return dt
 
 
 @router.get("/changelog", response_model=list[ChangelogOut])
@@ -26,7 +41,10 @@ def create_changelog_entry(payload: ChangelogCreate, db: Session = Depends(get_d
     """Create a new changelog entry."""
 
     data = payload.model_dump()
-    data["published_at"] = data["published_at"] or datetime.now(UTC).replace(tzinfo=None)
+    if data["published_at"] is not None:
+        data["published_at"] = _to_naive_local(data["published_at"])
+    else:
+        data["published_at"] = datetime.now(_FORTALEZA_TZ).replace(tzinfo=None)
     return ChangelogRepository(db).create(ChangelogEntry(**data))
 
 
@@ -44,6 +62,8 @@ def update_changelog_entry(
         raise HTTPException(status_code=404, detail="Changelog entry not found")
     data = payload.model_dump(exclude_none=True)
     for key, value in data.items():
+        if key == "published_at" and isinstance(value, datetime):
+            value = _to_naive_local(value)
         setattr(entry, key, value)
     return repository.update(entry)
 
