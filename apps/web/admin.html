@@ -97,6 +97,7 @@
             <button class="tab-btn active" data-tab="churches">Igrejas</button>
             <button class="tab-btn" data-tab="schedules">Horários</button>
             <button class="tab-btn" data-tab="suggestions">Sugestões</button>
+            <button class="tab-btn" data-tab="changelog">Changelog</button>
             <button class="tab-btn" data-tab="import">Importação CSV</button>
           </div>
 
@@ -181,6 +182,54 @@
               </table>
             </div>
             <div id="suggestionStatus" class="status"></div>
+          </section>
+
+          <section id="tab-changelog" class="tab-panel">
+            <h2>Changelog</h2>
+            <div class="grid-2">
+              <div class="card">
+                <h2 id="changelogFormTitle">Nova atualização</h2>
+                <form id="changelogForm">
+                  <div class="field">
+                    <label for="changelog_title">Título</label>
+                    <input id="changelog_title" name="title" required />
+                  </div>
+                  <div class="field">
+                    <label for="changelog_description">Descrição</label>
+                    <textarea id="changelog_description" name="description" required></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="changelog_badge">Badge</label>
+                    <select id="changelog_badge" name="badge" required>
+                      <option value="new">Novo</option>
+                      <option value="improved">Melhoria</option>
+                      <option value="fixed">Correção</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="changelog_published_at">Data de publicação (opcional)</label>
+                    <input id="changelog_published_at" name="published_at" type="datetime-local" />
+                  </div>
+                  <div class="actions">
+                    <button type="submit" id="changelogSubmitBtn">Salvar atualização</button>
+                    <button type="button" id="changelogCancelEditBtn" class="secondary">Cancelar edição</button>
+                  </div>
+                </form>
+                <div id="changelogStatus" class="status"></div>
+              </div>
+              <div class="card">
+                <h2>Lista de atualizações</h2>
+                <button id="refreshChangelog" class="secondary" type="button">Atualizar</button>
+                <div style="overflow:auto; margin-top:8px;">
+                  <table>
+                    <thead>
+                      <tr><th>ID</th><th>Título</th><th>Badge</th><th>Publicada em</th><th>Ações</th></tr>
+                    </thead>
+                    <tbody id="changelogTbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           </section>
 
           <section id="tab-import" class="tab-panel">

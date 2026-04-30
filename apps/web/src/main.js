@@ -38,6 +38,11 @@ const nowResultsTableWrap = document.getElementById("nowResultsTableWrap");
 const nowResultsMessage = document.getElementById("nowResultsMessage");
 const cityByStateSection = document.getElementById("cityByStateSection");
 const cityByStateContent = document.getElementById("cityByStateContent");
+const changelogList = document.getElementById("changelogList");
+const changelogMessage = document.getElementById("changelogMessage");
+const openNovidadesButton = document.getElementById("openNovidadesButton");
+const homeChangelogSection = document.getElementById("homeChangelogSection");
+let changelogAlreadyLoaded = false;
 
 function clearMarkers() {
   markers.forEach((marker) => marker.remove());
@@ -440,6 +445,64 @@ async function loadCitiesByStateSection() {
   });
 }
 
+function getBadgePresentation(badge) {
+  if (badge === "new") return { label: "Novo", className: "changelog-badge-new" };
+  if (badge === "improved") return { label: "Melhoria", className: "changelog-badge-improved" };
+  if (badge === "fixed") return { label: "Correção", className: "changelog-badge-fixed" };
+  return { label: "Atualização", className: "" };
+}
+
+function formatPublishedDate(isoDate) {
+  const parsed = new Date(isoDate);
+  if (Number.isNaN(parsed.getTime())) return "-";
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(parsed);
+}
+
+function renderChangelogEntries(entries) {
+  if (!changelogList || !changelogMessage) return;
+  changelogList.innerHTML = "";
+  changelogMessage.textContent = "";
+  if (!Array.isArray(entries) || entries.length === 0) {
+    changelogMessage.textContent = "Nenhuma novidade publicada nos últimos 15 dias.";
+    return;
+  }
+  entries.forEach((entry) => {
+    const card = document.createElement("article");
+    card.className = "changelog-item";
+    const title = document.createElement("h4");
+    title.className = "changelog-item-title";
+    title.textContent = entry.title || "Atualização";
+    const meta = document.createElement("div");
+    meta.className = "changelog-item-meta";
+    const badge = document.createElement("span");
+    const badgeInfo = getBadgePresentation(entry.badge);
+    badge.className = `changelog-badge ${badgeInfo.className}`.trim();
+    badge.textContent = badgeInfo.label;
+    const published = document.createElement("span");
+    published.className = "changelog-date";
+    published.textContent = formatPublishedDate(entry.published_at);
+    const description = document.createElement("p");
+    description.className = "changelog-description";
+    description.textContent = entry.description || "";
+    meta.appendChild(badge);
+    meta.appendChild(published);
+    card.appendChild(title);
+    card.appendChild(meta);
+    card.appendChild(description);
+    changelogList.appendChild(card);
+  });
+}
+
+async function loadLatestChangelog() {
+  if (!changelogMessage) return;
+  changelogMessage.textContent = "Carregando novidades...";
+  const response = await fetch(`${API_BASE}/changelog/latest`);
+  if (!response.ok) throw new Error("Falha ao buscar changelog.");
+  const payload = await response.json();
+  renderChangelogEntries(payload);
+  changelogAlreadyLoaded = true;
+}
+
 ["city", "filtro_cidade", "city_now"].forEach((id) => {
   const input = document.getElementById(id);
   input.addEventListener("input", () => loadCitySuggestions(input.value.trim()));
@@ -481,3 +544,21 @@ document.getElementById("addCityCta").addEventListener("click", (event) => {
   setActiveTab("tab-home");
   document.getElementById("feedback_home").scrollIntoView({ behavior: "smooth", block: "start" });
 });
+
+if (openNovidadesButton) {
+  openNovidadesButton.addEventListener("click", async () => {
+    setActiveTab("tab-home");
+    if (!homeChangelogSection) return;
+    homeChangelogSection.classList.remove("hidden");
+    if (!changelogAlreadyLoaded) {
+      try {
+        await loadLatestChangelog();
+      } catch (error) {
+        if (changelogMessage) {
+          changelogMessage.textContent = "Não foi possível carregar as novidades agora.";
+        }
+      }
+    }
+    homeChangelogSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
