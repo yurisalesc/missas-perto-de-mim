@@ -4,6 +4,8 @@ import { escapeHtml } from "./lib/sanitize.js";
 let auth = { user: "", pass: "" };
 let churchesCache = [];
 let editingChurchId = null;
+let changelogCache = [];
+let editingChangelogId = null;
 let churchesRefreshRequestId = 0;
 const adminLayout = document.getElementById("adminLayout");
 const adminMain = document.getElementById("adminMain");
@@ -20,16 +22,20 @@ function clearAuth() {
 function clearAdminUi() {
   churchesCache = [];
   editingChurchId = null;
+  changelogCache = [];
+  editingChangelogId = null;
   churchesRefreshRequestId += 1;
   document.getElementById("churchesTbody").innerHTML = "";
   document.getElementById("schedulesTbody").innerHTML = "";
   document.getElementById("suggestionsTbody").innerHTML = "";
+  document.getElementById("changelogTbody").innerHTML = "";
   document.getElementById("churchSearchCity").value = "";
   document.getElementById("churchSearchName").value = "";
   document.getElementById("scheduleForm").reset();
   document.getElementById("csvForm").reset();
   resetChurchForm();
-  ["churchStatus", "scheduleStatus", "suggestionStatus", "csvStatus", "exportStatus"].forEach((id) => {
+  resetChangelogForm();
+  ["churchStatus", "scheduleStatus", "suggestionStatus", "changelogStatus", "csvStatus", "exportStatus"].forEach((id) => {
     setStatus(id, "");
   });
 }
@@ -215,9 +221,83 @@ async function refreshSuggestions() {
   });
 }
 
+function badgeLabel(badge) {
+  if (badge === "new") return "Novo";
+  if (badge === "improved") return "Melhoria";
+  if (badge === "fixed") return "Correção";
+  return badge || "-";
+}
+
+function toDateTimeInputValue(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const offsetMs = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
+function resetChangelogForm() {
+  const form = document.getElementById("changelogForm");
+  form.reset();
+  editingChangelogId = null;
+  document.getElementById("changelogFormTitle").textContent = "Nova atualização";
+  document.getElementById("changelogSubmitBtn").textContent = "Salvar atualização";
+}
+
+function startChangelogEdit(entryId) {
+  const entry = changelogCache.find((item) => item.id === entryId);
+  if (!entry) return;
+  editingChangelogId = entry.id;
+  const form = document.getElementById("changelogForm");
+  form.elements.title.value = entry.title || "";
+  form.elements.description.value = entry.description || "";
+  form.elements.badge.value = entry.badge || "new";
+  form.elements.published_at.value = toDateTimeInputValue(entry.published_at);
+  document.getElementById("changelogFormTitle").textContent = `Editar atualização #${entry.id}`;
+  document.getElementById("changelogSubmitBtn").textContent = "Salvar alterações";
+}
+
+async function refreshChangelog() {
+  const tbody = document.getElementById("changelogTbody");
+  tbody.innerHTML = "";
+  const items = await apiFetch("/admin/changelog");
+  changelogCache = items;
+  items.forEach((entry) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${entry.id}</td>
+      <td>${escapeHtml(entry.title || "-")}</td>
+      <td>${escapeHtml(badgeLabel(entry.badge))}</td>
+      <td>${escapeHtml(toDateTimeInputValue(entry.published_at).replace("T", " ") || "-")}</td>
+      <td class="actions">
+        <button data-action="edit" data-id="${entry.id}" class="secondary">Editar</button>
+        <button data-action="delete" data-id="${entry.id}" class="danger">Excluir</button>
+      </td>
+    `;
+    tr.querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (btn.dataset.action === "edit") {
+          startChangelogEdit(entry.id);
+          return;
+        }
+        if (!confirm(`Excluir atualização #${entry.id}?`)) return;
+        try {
+          await apiFetch(`/admin/changelog/${entry.id}`, { method: "DELETE" });
+          setStatus("changelogStatus", "Atualização excluída.");
+          if (editingChangelogId === entry.id) resetChangelogForm();
+          refreshChangelog();
+        } catch (e) {
+          setStatus("changelogStatus", `Erro ao excluir: ${e.message}`, true);
+        }
+      });
+    });
+    tbody.appendChild(tr);
+  });
+}
+
 async function bootstrapData() {
   try {
-    await Promise.all([refreshChurches(), refreshSchedules(), refreshSuggestions()]);
+    await Promise.all([refreshChurches(), refreshSchedules(), refreshSuggestions(), refreshChangelog()]);
   } catch (e) {
     setStatus("authStatus", "Falha ao carregar dados. Verifique login/API.", true);
   }
@@ -359,12 +439,46 @@ function setupForms() {
       setStatus("exportStatus", `Erro ao exportar: ${e.message}`, true);
     }
   });
+
+  document.getElementById("changelogForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = new FormData(event.target);
+    const publishedAtRaw = String(data.get("published_at") || "").trim();
+    const payload = {
+      title: String(data.get("title") || "").trim(),
+      description: String(data.get("description") || "").trim(),
+      badge: String(data.get("badge") || "").trim(),
+      published_at: publishedAtRaw || null,
+    };
+    if (!payload.title || !payload.description || !payload.badge) {
+      setStatus("changelogStatus", "Preencha título, descrição e badge.", true);
+      return;
+    }
+    try {
+      await apiFetch(editingChangelogId ? `/admin/changelog/${editingChangelogId}` : "/admin/changelog", {
+        method: editingChangelogId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      setStatus(
+        "changelogStatus",
+        editingChangelogId ? "Atualização editada com sucesso." : "Atualização criada com sucesso."
+      );
+      resetChangelogForm();
+      refreshChangelog();
+    } catch (e) {
+      setStatus("changelogStatus", `Erro ao salvar: ${e.message}`, true);
+    }
+  });
+
+  document.getElementById("changelogCancelEditBtn").addEventListener("click", resetChangelogForm);
 }
 
 function setupRefreshButtons() {
   document.getElementById("refreshChurches").addEventListener("click", refreshChurches);
   document.getElementById("refreshSchedules").addEventListener("click", refreshSchedules);
   document.getElementById("refreshSuggestions").addEventListener("click", refreshSuggestions);
+  document.getElementById("refreshChangelog").addEventListener("click", refreshChangelog);
   document.getElementById("churchSearchCity").addEventListener("input", refreshChurches);
   document.getElementById("churchSearchName").addEventListener("input", refreshChurches);
 }
