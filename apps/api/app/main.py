@@ -8,7 +8,7 @@ from app.core.config import settings
 from app.db.base import Base
 from app.db.migrations import ensure_church_optional_columns
 from app.db.session import engine
-from app.routers import admin, masses, search, suggestions
+from app.routers import admin, changelog, masses, search, suggestions
 
 is_production = settings.app_env == "production"
 app = FastAPI(
@@ -45,4 +45,5 @@ def health() -> dict[str, str]:
 app.include_router(search.router)
 app.include_router(masses.router)
 app.include_router(suggestions.router)
+app.include_router(changelog.router)
 app.include_router(admin.router, prefix="/admin")
