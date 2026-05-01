@@ -34,6 +34,14 @@ fi
 
 echo "[deploy] Step 3/7: restart api only (db volume untouched)"
 docker compose $COMPOSE_ARGS up -d db
+
+# Prevent common failure: host port 8000 already in use by stale containers.
+API_PORT_CONTAINERS="$(docker ps --filter "publish=8000" --format '{{.ID}}')"
+if [ -n "$API_PORT_CONTAINERS" ]; then
+  echo "[deploy] Releasing host port 8000 from containers: $API_PORT_CONTAINERS"
+  docker rm -f $API_PORT_CONTAINERS
+fi
+
 docker compose $COMPOSE_ARGS up -d --build --no-deps api
 
 echo "[deploy] Step 4/7: wait api health"
