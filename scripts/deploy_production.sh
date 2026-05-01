@@ -35,12 +35,20 @@ fi
 echo "[deploy] Step 3/7: restart api only (db volume untouched)"
 docker compose $COMPOSE_ARGS up -d db
 
-# Prevent common failure: host port 8000 already in use by stale containers.
-API_PORT_CONTAINERS="$(docker ps --filter "publish=8000" --format '{{.ID}}')"
+# Remove the api container explicitly before rebuilding.
+# Running AND stopped containers can cause "port already in use" on recreate.
+echo "[deploy] Removing stale api container if exists"
+docker compose $COMPOSE_ARGS rm -sf api 2>/dev/null || true
+
+# Also free port 8000 from any other container outside this compose project.
+API_PORT_CONTAINERS="$(docker ps -a --filter "publish=8000" --format '{{.ID}}')"
 if [ -n "$API_PORT_CONTAINERS" ]; then
-  echo "[deploy] Releasing host port 8000 from containers: $API_PORT_CONTAINERS"
+  echo "[deploy] Releasing host port 8000 from: $API_PORT_CONTAINERS"
   docker rm -f $API_PORT_CONTAINERS
 fi
+
+# Free port 8000 from any non-docker host process.
+fuser -k 8000/tcp 2>/dev/null || true
 
 docker compose $COMPOSE_ARGS up -d --build --no-deps api
 
