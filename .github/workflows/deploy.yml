@@ -37,13 +37,17 @@ jobs:
           debug: true
           script_stop: true
           script: |
-            set -euo pipefail
+            set -Eeuo pipefail
+            trap 'echo "FAILED: line=${LINENO} cmd=${BASH_COMMAND}" >&2' ERR
+            export PS4='+ [${LINENO}] '
+            set -x
 
             APP_DIR="${{ secrets.VPS_APP_DIR }}"
             if [ -z "$APP_DIR" ]; then
               APP_DIR="/opt/missas-perto-de-mim"
             fi
 
+            echo "Step: cd + git pull"
             cd "$APP_DIR"
             git pull --ff-only origin main
 
@@ -56,17 +60,24 @@ jobs:
             mkdir -p "$BACKUP_DIR"
 
             # Backup current database (if a DB container already exists and is running).
+            echo "Step: backup database if running"
             EXISTING_DB_CONTAINER="$(docker compose $COMPOSE_ARGS ps -q db || true)"
             if [ -n "$EXISTING_DB_CONTAINER" ] && [ "$(docker inspect -f '{{.State.Running}}' "$EXISTING_DB_CONTAINER" 2>/dev/null || echo false)" = "true" ]; then
               echo "Creating PostgreSQL backup at $BACKUP_FILE"
               docker exec "$EXISTING_DB_CONTAINER" pg_dump -U "$DB_USER" "$DB_NAME" | gzip > "$BACKUP_FILE"
               # Keep last 14 backups.
-              ls -1t "$BACKUP_DIR"/db-*.sql.gz 2>/dev/null | tail -n +15 | xargs -r rm -f
+              shopt -s nullglob
+              backup_files=("$BACKUP_DIR"/db-*.sql.gz)
+              if [ "${#backup_files[@]}" -gt 14 ]; then
+                printf '%s\n' "${backup_files[@]}" | sort -r | tail -n +15 | xargs -r rm -f
+              fi
+              shopt -u nullglob
             else
               echo "No running DB container found, skipping backup."
             fi
 
             # Free host port 8000 only (db is internal-only in production).
+            echo "Step: recycle api port 8000 container"
             API_PORT_CONTAINERS="$(docker ps --filter "publish=8000" --format '{{.ID}}')"
             if [ -n "$API_PORT_CONTAINERS" ]; then
               echo "Stopping containers using host port 8000: $API_PORT_CONTAINERS"
@@ -74,10 +85,12 @@ jobs:
             fi
 
             # Keep database container and volume untouched on regular deploys.
+            echo "Step: compose up db + api"
             docker compose $COMPOSE_ARGS up -d db
             docker compose $COMPOSE_ARGS up -d --build --no-deps api
 
             WEB_TMP_DIR="/var/www/missas_tmp_${TIMESTAMP}"
+            echo "Step: build web + publish static files"
             mkdir -p /var/www/missas "$WEB_TMP_DIR"
             tar -C "$APP_DIR/apps/web" -cf - . \
               | docker run --rm -i -w /app node:22-bookworm bash -lc "set -euo pipefail; mkdir -p /app; tar -xf - -C /app; npx --yes vite build >&2; tar -C /app/dist -cf - ." \
@@ -95,6 +108,7 @@ jobs:
             fi
             rm -rf "$WEB_TMP_DIR"
 
+            echo "Step: reload nginx"
             chown -R www-data:www-data /var/www/missas || true
             chmod -R 755 /var/www/missas
             nginx -t
