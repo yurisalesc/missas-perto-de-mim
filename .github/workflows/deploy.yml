@@ -33,6 +33,24 @@ jobs:
             cd "$APP_DIR"
             git pull --ff-only origin main
 
+            DB_NAME="${POSTGRES_DB:-missa_perto}"
+            DB_USER="${POSTGRES_USER:-missa_user}"
+            BACKUP_DIR="${BACKUP_DIR:-/var/backups/missas-perto-de-mim}"
+            TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+            BACKUP_FILE="${BACKUP_DIR}/db-${TIMESTAMP}.sql.gz"
+            mkdir -p "$BACKUP_DIR"
+
+            # Backup current database (if a DB container already exists and is running).
+            EXISTING_DB_CONTAINER="$(docker compose -f docker-compose.prod.yml ps -q db || true)"
+            if [ -n "$EXISTING_DB_CONTAINER" ] && [ "$(docker inspect -f '{{.State.Running}}' "$EXISTING_DB_CONTAINER" 2>/dev/null || echo false)" = "true" ]; then
+              echo "Creating PostgreSQL backup at $BACKUP_FILE"
+              docker exec "$EXISTING_DB_CONTAINER" pg_dump -U "$DB_USER" "$DB_NAME" | gzip > "$BACKUP_FILE"
+              # Keep last 14 backups.
+              ls -1t "$BACKUP_DIR"/db-*.sql.gz 2>/dev/null | tail -n +15 | xargs -r rm -f
+            else
+              echo "No running DB container found, skipping backup."
+            fi
+
             # Remove stale Docker containers that still hold required host ports.
             for PORT in 8000 5432; do
               CONTAINERS="$(docker ps --filter "publish=${PORT}" --format '{{.ID}}')"
