@@ -48,7 +48,7 @@ jobs:
             mkdir -p /var/www/missas
             rm -rf /var/www/missas/*
             tar -C "$APP_DIR/apps/web" -cf - . \
-              | docker run --rm -i -w /app node:22-bookworm bash -lc "set -euo pipefail; mkdir -p /app; tar -xf - -C /app; npx --yes vite build; tar -C /app/dist -cf - ." \
+              | docker run --rm -i -w /app node:22-bookworm bash -lc "set -euo pipefail; mkdir -p /app; tar -xf - -C /app; npx --yes vite build >&2; tar -C /app/dist -cf - ." \
               | tar -C /var/www/missas -xf -
             mkdir -p /var/www/missas/src
             cp apps/web/admin.html /var/www/missas/admin.html
