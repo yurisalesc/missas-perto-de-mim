@@ -533,7 +533,11 @@ document.getElementById("tab-all").addEventListener("click", () => setActiveTab(
 document.getElementById("tab-now").addEventListener("click", () => setActiveTab("tab-now"));
 document.getElementById("toggleCitiesButton").addEventListener("click", () => {
   if (!cityByStateSection) return;
+  const willShow = cityByStateSection.classList.contains("hidden");
   cityByStateSection.classList.toggle("hidden");
+  if (willShow && cityByStateContent && cityByStateContent.children.length === 0) {
+    loadCitiesByStateSection();
+  }
 });
 document.getElementById("filtro_dia_semana").addEventListener("change", (event) => {
   applyAllMassesDayColumnVisibility(event.target.value);
