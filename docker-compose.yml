@@ -5,6 +5,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-missa_perto}
       POSTGRES_USER: ${POSTGRES_USER:-missa_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-missa_pass}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
@@ -43,3 +45,6 @@ services:
 networks:
   missa_net:
     driver: bridge
+
+volumes:
+  pgdata:

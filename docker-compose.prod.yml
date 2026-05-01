@@ -5,6 +5,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-missa_perto}
       POSTGRES_USER: ${POSTGRES_USER:-missa_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-missa_pass}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U missa_user -d missa_perto"]
       interval: 5s
@@ -39,3 +41,6 @@ services:
 networks:
   missa_net:
     driver: bridge
+
+volumes:
+  pgdata:
