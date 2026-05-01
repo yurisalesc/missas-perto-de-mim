@@ -42,5 +42,6 @@ jobs:
               APP_DIR="/opt/missas-perto-de-mim"
             fi
             cd "$APP_DIR"
+            git pull --ff-only origin main
             chmod +x scripts/deploy_production.sh
             APP_DIR="$APP_DIR" bash scripts/deploy_production.sh
