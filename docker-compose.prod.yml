@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:16
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-missa_perto}
       POSTGRES_USER: ${POSTGRES_USER:-missa_user}
@@ -21,20 +22,20 @@ services:
       context: ./apps/api
       dockerfile: Dockerfile
     working_dir: /app
+    restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-missa_user}:${POSTGRES_PASSWORD:-missa_pass}@db:5432/${POSTGRES_DB:-missa_perto}
-      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////app/data/missa_perto.db}
+      APP_ENV: ${APP_ENV:-production}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
+    volumes:
+      - missas_app_data:/app/data
     ports:
       - "8000:8000"
     dns:
       - 8.8.8.8
       - 1.1.1.1
-    depends_on:
-      db:
-        condition: service_healthy
     networks:
       - missa_net
 
@@ -45,3 +46,5 @@ networks:
 volumes:
   pgdata:
     name: missas_pgdata
+  missas_app_data:
+    name: missas_app_data

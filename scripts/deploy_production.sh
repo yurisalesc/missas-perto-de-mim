@@ -32,15 +32,17 @@ else
   echo "[deploy] No running DB container found, skipping backup"
 fi
 
-echo "[deploy] Step 3/7: restart api only (db volume untouched)"
+echo "[deploy] Step 3/7: start db + rebuild api (data volumes untouched)"
+
+# Start (or keep) db with its persistent volume.
 docker compose $COMPOSE_ARGS up -d db
 
-# Remove the api container explicitly before rebuilding.
-# Running AND stopped containers can cause "port already in use" on recreate.
+# Safety: remove stale api container before rebuilding.
+# Both running and stopped containers can cause "port already in use".
 echo "[deploy] Removing stale api container if exists"
 docker compose $COMPOSE_ARGS rm -sf api 2>/dev/null || true
 
-# Also free port 8000 from any other container outside this compose project.
+# Free port 8000 from any other container outside this compose project.
 API_PORT_CONTAINERS="$(docker ps -a --filter "publish=8000" --format '{{.ID}}')"
 if [ -n "$API_PORT_CONTAINERS" ]; then
   echo "[deploy] Releasing host port 8000 from: $API_PORT_CONTAINERS"
@@ -51,6 +53,9 @@ fi
 fuser -k 8000/tcp 2>/dev/null || true
 
 docker compose $COMPOSE_ARGS up -d --build --no-deps api
+
+echo "[deploy] Persistent data volumes:"
+docker volume ls --filter "name=missas_"
 
 echo "[deploy] Step 4/7: wait api health"
 for _ in $(seq 1 60); do
