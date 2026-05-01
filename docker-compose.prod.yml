@@ -44,3 +44,4 @@ networks:
 
 volumes:
   pgdata:
+    name: missas_pgdata

@@ -38,10 +38,11 @@ jobs:
             BACKUP_DIR="${BACKUP_DIR:-/var/backups/missas-perto-de-mim}"
             TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
             BACKUP_FILE="${BACKUP_DIR}/db-${TIMESTAMP}.sql.gz"
+            COMPOSE_ARGS="-p missas -f docker-compose.prod.yml"
             mkdir -p "$BACKUP_DIR"
 
             # Backup current database (if a DB container already exists and is running).
-            EXISTING_DB_CONTAINER="$(docker compose -f docker-compose.prod.yml ps -q db || true)"
+            EXISTING_DB_CONTAINER="$(docker compose $COMPOSE_ARGS ps -q db || true)"
             if [ -n "$EXISTING_DB_CONTAINER" ] && [ "$(docker inspect -f '{{.State.Running}}' "$EXISTING_DB_CONTAINER" 2>/dev/null || echo false)" = "true" ]; then
               echo "Creating PostgreSQL backup at $BACKUP_FILE"
               docker exec "$EXISTING_DB_CONTAINER" pg_dump -U "$DB_USER" "$DB_NAME" | gzip > "$BACKUP_FILE"
@@ -60,8 +61,8 @@ jobs:
               fi
             done
 
-            docker compose -f docker-compose.prod.yml up -d --build --remove-orphans api db
-            docker compose -f docker-compose.prod.yml restart api
+            docker compose $COMPOSE_ARGS up -d --build --remove-orphans api db
+            docker compose $COMPOSE_ARGS restart api
 
             mkdir -p /var/www/missas
             rm -rf /var/www/missas/*
