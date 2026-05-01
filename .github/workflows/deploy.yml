@@ -63,15 +63,23 @@ jobs:
             docker compose $COMPOSE_ARGS up -d db
             docker compose $COMPOSE_ARGS up -d --build --no-deps api
 
-            mkdir -p /var/www/missas
-            rm -rf /var/www/missas/*
+            WEB_TMP_DIR="/var/www/missas_tmp_${TIMESTAMP}"
+            mkdir -p /var/www/missas "$WEB_TMP_DIR"
             tar -C "$APP_DIR/apps/web" -cf - . \
               | docker run --rm -i -w /app node:22-bookworm bash -lc "set -euo pipefail; mkdir -p /app; tar -xf - -C /app; npx --yes vite build >&2; tar -C /app/dist -cf - ." \
-              | tar -C /var/www/missas -xf -
-            mkdir -p /var/www/missas/src
-            cp apps/web/admin.html /var/www/missas/admin.html
-            cp -r apps/web/src/* /var/www/missas/src/
-            sed -i 's|http://127.0.0.1:8000|/api|g' /var/www/missas/src/config.js
+              | tar -C "$WEB_TMP_DIR" -xf -
+            mkdir -p "$WEB_TMP_DIR/src"
+            cp apps/web/admin.html "$WEB_TMP_DIR/admin.html"
+            cp -r apps/web/src/* "$WEB_TMP_DIR/src/"
+            sed -i 's|http://127.0.0.1:8000|/api|g' "$WEB_TMP_DIR/src/config.js"
+
+            # Publish web files without clearing live directory first.
+            if command -v rsync >/dev/null 2>&1; then
+              rsync -a --delete "$WEB_TMP_DIR"/ /var/www/missas/
+            else
+              cp -a "$WEB_TMP_DIR"/. /var/www/missas/
+            fi
+            rm -rf "$WEB_TMP_DIR"
 
             chown -R www-data:www-data /var/www/missas || true
             chmod -R 755 /var/www/missas
