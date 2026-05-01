@@ -14,6 +14,17 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Precheck SSH connectivity
+        run: |
+          set -euo pipefail
+          echo "Runner public IP:"
+          curl -s https://api.ipify.org || true
+          echo
+          echo "Testing TCP connectivity to ${{ secrets.VPS_HOST }}:22"
+          timeout 20 bash -lc 'cat < /dev/null > /dev/tcp/${{ secrets.VPS_HOST }}/22' \
+            && echo "Port 22 reachable from runner" \
+            || (echo "Port 22 unreachable from runner"; exit 1)
+
       - name: Deploy on VPS
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -21,6 +32,9 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
+          timeout: 60s
+          command_timeout: 30m
+          debug: true
           script_stop: true
           script: |
             set -euo pipefail
