@@ -12,14 +12,12 @@ Encontre missas com mais facilidade, por cidade e por proximidade, em uma experi
 |---|---|
 | 🔎 **Busca inteligente** | Missas por cidade, raio e janela de horário |
 | 🗺️ **Mapa interativo** | Igrejas plotadas com ação de foco no mapa |
-| ⏰ **Acontecendo agora** | Missas em andamento no momento da busca |
 | ℹ️ **Info da igreja** | Telefone, redes sociais/site e observações |
 
 ## 💡 O que o sistema faz
 
 - Buscar missas na aba **Home** usando cidade, raio e horário.
 - Listar **todas as missas** por cidade e/ou nome da igreja.
-- Mostrar **missas acontecendo agora**.
 - Exibir resultados no mapa com ações rápidas por igreja.
 
 Este README foca no uso público da plataforma e na contribuição de dados da comunidade.
