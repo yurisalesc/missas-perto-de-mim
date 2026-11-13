@@ -14,7 +14,9 @@ WEB_TMP_DIR="/var/www/missas_tmp_${TIMESTAMP}"
 
 echo "[deploy] Step 1/7: update source"
 cd "$APP_DIR"
-git pull --ff-only origin main
+git fetch origin main
+git reset --hard origin/main
+git clean -fd
 
 echo "[deploy] Step 2/7: database safety backup"
 mkdir -p "$BACKUP_DIR"
@@ -74,11 +76,11 @@ else
   echo "[deploy] WARNING: $WEB_ENV_FILE not found — Pix page will show empty state" >&2
 fi
 mkdir -p /var/www/missas "$WEB_TMP_DIR"
-tar -C "$APP_DIR/apps/web" -cf - . \
+tar -C "$APP_DIR/apps/web" --exclude=node_modules --exclude=dist -cf - . \
   | docker run --rm -i \
       -e "VITE_PIX_COPIA_COLA=${VITE_PIX_COPIA_COLA:-}" \
       -w /app node:22-bookworm \
-      bash -lc "set -euo pipefail; mkdir -p /app; tar -xf - -C /app; npx --yes vite build >&2; tar -C /app/dist -cf - ." \
+      bash -lc "set -euo pipefail; mkdir -p /app; tar -xf - -C /app; npm ci >&2; npx --yes vite build >&2; tar -C /app/dist -cf - ." \
   | tar -C "$WEB_TMP_DIR" -xf -
 mkdir -p "$WEB_TMP_DIR/src"
 cp "$APP_DIR/apps/web/admin.html" "$WEB_TMP_DIR/admin.html"
