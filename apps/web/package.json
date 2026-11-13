@@ -1,5 +1,6 @@
 {
+  "private": true,
   "dependencies": {
-    "qrcode": "^1.5.4"
+    "qrcode": "1.5.4"
   }
 }

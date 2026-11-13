@@ -80,7 +80,14 @@ tar -C "$APP_DIR/apps/web" --exclude=node_modules --exclude=dist -cf - . \
   | docker run --rm -i \
       -e "VITE_PIX_COPIA_COLA=${VITE_PIX_COPIA_COLA:-}" \
       -w /app node:22-bookworm \
-      bash -lc "set -euo pipefail; mkdir -p /app; tar -xf - -C /app; npm ci >&2; npx --yes vite build >&2; tar -C /app/dist -cf - ." \
+      bash -lc 'set -euo pipefail
+mkdir -p /app
+tar -xf - -C /app
+cd /app
+npm install --no-fund --no-audit qrcode@1.5.4 >&2
+test -f node_modules/qrcode/package.json
+npx --yes vite build >&2
+tar -C /app/dist -cf - .' \
   | tar -C "$WEB_TMP_DIR" -xf -
 mkdir -p "$WEB_TMP_DIR/src"
 cp "$APP_DIR/apps/web/admin.html" "$WEB_TMP_DIR/admin.html"
