@@ -1,5 +1,6 @@
 import { API_BASE } from "./config.js";
 import { formatPhoneHtml, formatSocialHtml } from "./lib/contact.js";
+import { buildDirectionsUrl, openDirections } from "./lib/navigation.js";
 import { escapeHtml } from "./lib/sanitize.js";
 import { weekdayNamePt } from "./lib/time.js";
 
@@ -118,14 +119,81 @@ function plotChurches(churches) {
   fitMarkers();
 }
 
-function showOnlyChurchOnMap(church) {
+function applyUserLocationOnMap(coords) {
+  if (!map || !coords) return;
+  map.setView([coords.lat, coords.lon], 13);
+  if (userLocationMarker) {
+    userLocationMarker.setLatLng([coords.lat, coords.lon]);
+    return;
+  }
+  userLocationMarker = L.circleMarker([coords.lat, coords.lon], {
+    radius: 9,
+    color: "#dc2626",
+    fillColor: "#ef4444",
+    fillOpacity: 0.95,
+    weight: 2,
+  })
+    .addTo(map)
+    .bindPopup("Sua localização");
+}
+
+function getUserCoords({ forceRefresh = false } = {}) {
+  if (!forceRefresh && currentCoords) {
+    return Promise.resolve(currentCoords);
+  }
+  if (!navigator.geolocation) {
+    return Promise.reject(new Error("unsupported"));
+  }
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
+        });
+      },
+      (error) => reject(error),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+}
+
+function showChurchOnSiteMap(church, userCoords = null) {
   clearMarkers();
   if (!map) return;
   const marker = L.marker([church.latitude, church.longitude]).addTo(map);
-  marker.bindPopup(`${church.nome}<br>${church.endereco}`).openPopup();
+  marker.bindPopup(`${escapeHtml(church.nome)}<br>${escapeHtml(church.endereco)}`).openPopup();
   markers.push(marker);
-  fitMarkers();
+  if (userCoords) {
+    applyUserLocationOnMap(userCoords);
+    const bounds = L.latLngBounds([
+      [church.latitude, church.longitude],
+      [userCoords.lat, userCoords.lon],
+    ]);
+    map.fitBounds(bounds, { padding: [40, 40] });
+  } else {
+    fitMarkers();
+  }
   setActiveTab("tab-home");
+}
+
+async function navigateToChurch(church) {
+  let origin = currentCoords;
+  try {
+    origin = await getUserCoords();
+    currentCoords = origin;
+    updateLocationStatus();
+  } catch {
+    origin = null;
+  }
+
+  showChurchOnSiteMap(church, origin);
+
+  const url = buildDirectionsUrl({
+    origin,
+    destination: { lat: church.latitude, lon: church.longitude },
+  });
+  openDirections(url);
 }
 
 function formatOccurrenceHour(occurrenceIso, fallbackHorario) {
@@ -195,7 +263,7 @@ function appendChurchResultRow(targetTbody, church) {
     <td>${escapeHtml(masses || "-")}</td>
     <td><div class="table-actions">${mapBtn}${infoBtn}</div></td>
   `;
-  tr.querySelector("button").addEventListener("click", () => showOnlyChurchOnMap(church));
+  tr.querySelector("button").addEventListener("click", () => navigateToChurch(church));
   const infoButton = tr.querySelector('[data-info-id]');
   infoButton.addEventListener("click", () => {
     const existing = targetTbody.querySelector(`tr[data-info-for="${church.church_id}"]`);
@@ -263,40 +331,18 @@ async function runSearchHome() {
   plotChurches(payload);
 }
 
-document.getElementById("geo").addEventListener("click", () => {
-  if (!navigator.geolocation) {
-    alert("Seu navegador não suporta geolocalização.");
-    return;
+document.getElementById("geo").addEventListener("click", async () => {
+  try {
+    currentCoords = await getUserCoords({ forceRefresh: true });
+    applyUserLocationOnMap(currentCoords);
+    updateLocationStatus();
+  } catch (error) {
+    if (error?.message === "unsupported") {
+      alert("Seu navegador não suporta geolocalização.");
+      return;
+    }
+    alert("Não foi possível obter sua localização. Verifique as permissões e tente novamente.");
   }
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      currentCoords = {
-        lat: position.coords.latitude,
-        lon: position.coords.longitude,
-      };
-      if (map) {
-        map.setView([currentCoords.lat, currentCoords.lon], 13);
-        if (userLocationMarker) {
-          userLocationMarker.setLatLng([currentCoords.lat, currentCoords.lon]);
-        } else {
-          userLocationMarker = L.circleMarker([currentCoords.lat, currentCoords.lon], {
-            radius: 9,
-            color: "#dc2626",
-            fillColor: "#ef4444",
-            fillOpacity: 0.95,
-            weight: 2,
-          })
-            .addTo(map)
-            .bindPopup("Sua localização");
-        }
-      }
-      updateLocationStatus();
-    },
-    (error) => {
-      alert("Não foi possível obter sua localização. Verifique as permissões e tente novamente.");
-    },
-    { enableHighAccuracy: true, timeout: 10000 }
-  );
 });
 
 document.getElementById("clear_geo").addEventListener("click", () => {
