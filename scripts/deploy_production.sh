@@ -14,7 +14,9 @@ WEB_TMP_DIR="/var/www/missas_tmp_${TIMESTAMP}"
 
 echo "[deploy] Step 1/7: update source"
 cd "$APP_DIR"
-git pull --ff-only origin main
+git fetch origin main
+git reset --hard origin/main
+git clean -fd
 
 echo "[deploy] Step 2/7: database safety backup"
 mkdir -p "$BACKUP_DIR"
