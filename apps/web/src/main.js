@@ -42,7 +42,57 @@ const changelogList = document.getElementById("changelogList");
 const changelogMessage = document.getElementById("changelogMessage");
 const openNovidadesButton = document.getElementById("openNovidadesButton");
 const homeChangelogSection = document.getElementById("homeChangelogSection");
+const installCard = document.getElementById("installCard");
+const installMessage = document.getElementById("installMessage");
+const installButton = document.getElementById("installButton");
+const dismissInstallButton = document.getElementById("dismissInstallButton");
+let deferredInstallPrompt = null;
+let installCardDismissed = false;
 let changelogAlreadyLoaded = false;
+
+function isStandaloneMode() {
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+
+function isIosSafari() {
+  const ua = window.navigator.userAgent || "";
+  const isIosDevice =
+    /iPad|iPhone|iPod/.test(ua) || (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
+  const isSafariBrowser = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+  return isIosDevice && isSafariBrowser;
+}
+
+function hideInstallCard() {
+  if (!installCard) return;
+  installCard.classList.add("hidden");
+}
+
+function showInstallCard(message, showButton) {
+  if (!installCard || !installMessage || !installButton) return;
+  installMessage.textContent = message;
+  installButton.classList.toggle("hidden", !showButton);
+  installCard.classList.remove("hidden");
+}
+
+function updateInstallCard() {
+  if (!installCard || installCardDismissed) {
+    hideInstallCard();
+    return;
+  }
+  if (isStandaloneMode()) {
+    hideInstallCard();
+    return;
+  }
+  if (deferredInstallPrompt) {
+    showInstallCard("Instale o app para abrir mais rápido direto na tela inicial.", true);
+    return;
+  }
+  if (isIosSafari()) {
+    showInstallCard("No iPhone, toque em Compartilhar e depois em Adicionar à Tela de Início.", false);
+    return;
+  }
+  hideInstallCard();
+}
 
 function clearMarkers() {
   markers.forEach((marker) => marker.remove());
@@ -285,8 +335,42 @@ document.getElementById("search").addEventListener("click", runSearchHome);
 document.getElementById("search_now").addEventListener("click", runSearchNow);
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/src/sw.js");
+  navigator.serviceWorker.register("/sw.js").catch(() => {
+    // Keep app usable even when SW registration fails.
+  });
 }
+
+if (dismissInstallButton) {
+  dismissInstallButton.addEventListener("click", () => {
+    installCardDismissed = true;
+    hideInstallCard();
+  });
+}
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  updateInstallCard();
+});
+
+if (installButton) {
+  installButton.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installCardDismissed = true;
+    updateInstallCard();
+  });
+}
+
+window.addEventListener("appinstalled", () => {
+  deferredInstallPrompt = null;
+  installCardDismissed = true;
+  hideInstallCard();
+});
+
+updateInstallCard();
 
 document.querySelectorAll(".suggestionForm").forEach((form) => {
   form.addEventListener("submit", async (event) => {

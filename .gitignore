@@ -8,3 +8,4 @@ __pycache__/
 apps/web/dist/
 apps/web/.vite/
 node_modules/
+*.local.md
