@@ -613,6 +613,14 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
+    <script>
+      if (!window.__API_BASE__) {
+        const host = location.hostname;
+        if (host && host !== "localhost" && host !== "127.0.0.1") {
+          window.__API_BASE__ = "/api";
+        }
+      }
+    </script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
