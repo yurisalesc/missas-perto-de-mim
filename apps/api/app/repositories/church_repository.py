@@ -17,7 +17,7 @@ class ChurchRepository:
     def list_with_schedules(self, city: str | None = None) -> list[Church]:
         """Return churches and their schedules, optionally filtered by city."""
 
-        query = select(Church).options(joinedload(Church.horarios))
+        query = select(Church).options(joinedload(Church.mass_times))
         if city:
             city_value = city.strip()
             query = query.where(Church.cidade.ilike(f"%{city_value}%"))
@@ -27,7 +27,7 @@ class ChurchRepository:
     def list_filtered(self, nome: str | None = None, cidade: str | None = None) -> list[Church]:
         """Return churches filtered by optional name/city icontains."""
 
-        query = select(Church).options(joinedload(Church.horarios))
+        query = select(Church).options(joinedload(Church.mass_times))
         if nome:
             query = query.where(Church.nome.ilike(f"%{nome.strip()}%"))
         if cidade:

@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import app.models
 from app.core.config import settings
 from app.db.base import Base
-from app.db.migrations import ensure_church_optional_columns
+from app.db.migrations import ensure_church_optional_columns, ensure_confession_schedules_table
 from app.db.session import engine
 from app.routers import admin, changelog, masses, search, suggestions
 
@@ -33,6 +33,7 @@ def on_startup() -> None:
 
     Base.metadata.create_all(bind=engine)
     ensure_church_optional_columns(engine)
+    ensure_confession_schedules_table(engine)
 
 
 @app.get("/health")

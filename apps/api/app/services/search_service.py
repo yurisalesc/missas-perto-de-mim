@@ -39,7 +39,7 @@ class SearchService:
                 if distance > radius_km:
                     continue
 
-            matches = MassTimeService.filter_in_window(base_time, list(church.horarios), window_hours)
+            matches = MassTimeService.filter_in_window(base_time, list(church.mass_times), window_hours)
             if not matches:
                 continue
 
@@ -80,7 +80,7 @@ class SearchService:
         results: list[SearchResultChurch] = []
 
         for church in churches:
-            matches = MassTimeService.filter_happening_now(now, list(church.horarios), duration_minutes=90)
+            matches = MassTimeService.filter_happening_now(now, list(church.mass_times), duration_minutes=90)
             if not matches:
                 continue
 

@@ -150,10 +150,23 @@ class AdminCsvService:
 
         created_churches = 0
         created_schedules = 0
+        deleted_confession_schedules = 0
         try:
             if replace_existing:
-                self.db.query(MassSchedule).delete()
-                self.db.query(Church).delete()
+                existing_churches = (
+                    self.db.execute(
+                        select(Church).options(
+                            joinedload(Church.mass_times),
+                            joinedload(Church.confession_times),
+                        )
+                    )
+                    .unique()
+                    .scalars()
+                    .all()
+                )
+                deleted_confession_schedules = sum(len(church.confession_times) for church in existing_churches)
+                for church in existing_churches:
+                    self.db.delete(church)
                 self.db.flush()
 
             for row in rows:
@@ -201,11 +214,12 @@ class AdminCsvService:
         return {
             "created_churches": created_churches,
             "created_schedules": created_schedules,
+            "deleted_confession_schedules": deleted_confession_schedules,
             "replace_existing": replace_existing,
         }
 
     def export_database_csv_response(self) -> StreamingResponse:
-        churches = self.db.execute(select(Church).options(joinedload(Church.horarios))).unique().scalars().all()
+        churches = self.db.execute(select(Church).options(joinedload(Church.mass_times))).unique().scalars().all()
 
         output = StringIO()
         writer = csv.writer(output)
@@ -234,7 +248,7 @@ class AdminCsvService:
         for church in churches:
             by_day: dict[int, list[str]] = {i: [] for i in range(7)}
             schedule_notes: list[str] = []
-            for schedule in church.horarios:
+            for schedule in church.mass_times:
                 by_day[schedule.dia_semana].append(schedule.horario.strftime("%H:%M"))
                 if schedule.observacao:
                     schedule_notes.append(schedule.observacao.strip())

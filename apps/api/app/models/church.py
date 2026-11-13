@@ -22,4 +22,7 @@ class Church(Base):
     redes_sociais_site: Mapped[str | None] = mapped_column(String(255), nullable=True)
     observacao: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    horarios = relationship("MassSchedule", back_populates="church", cascade="all, delete-orphan")
+    mass_times = relationship("MassSchedule", back_populates="church", cascade="all, delete-orphan")
+    confession_times = relationship(
+        "ConfessionSchedule", back_populates="church", cascade="all, delete-orphan"
+    )
