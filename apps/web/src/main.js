@@ -1,4 +1,5 @@
 import { API_BASE } from "./config.js";
+import { formatPhoneHtml, formatSocialHtml } from "./lib/contact.js";
 import { escapeHtml } from "./lib/sanitize.js";
 import { weekdayNamePt } from "./lib/time.js";
 
@@ -209,8 +210,8 @@ function appendChurchResultRow(targetTbody, church) {
     infoRow.innerHTML = `
       <td colspan="6">
         <div class="info-box">
-          <div><strong>Telefone:</strong> ${escapeHtml(contact.telefone)}</div>
-          <div><strong>Redes sociais / Site:</strong> ${escapeHtml(contact.redesSociaisSite)}</div>
+          <div><strong>Telefone:</strong> ${formatPhoneHtml(contact.telefone)}</div>
+          <div><strong>Redes sociais / Site:</strong> ${formatSocialHtml(contact.redesSociaisSite)}</div>
           <div><strong>Observação:</strong> ${escapeHtml(contact.observacao)}</div>
         </div>
       </td>
@@ -457,8 +458,8 @@ document.getElementById("listar_todas").addEventListener("click", async () => {
       infoRow.innerHTML = `
         <td colspan="10">
           <div class="info-box">
-            <div><strong>Telefone:</strong> ${escapeHtml(row.telefone || "Não informado")}</div>
-            <div><strong>Redes sociais / Site:</strong> ${escapeHtml(row.redes_sociais_site || "Não informado")}</div>
+            <div><strong>Telefone:</strong> ${formatPhoneHtml(row.telefone)}</div>
+            <div><strong>Redes sociais / Site:</strong> ${formatSocialHtml(row.redes_sociais_site)}</div>
             <div><strong>Observação:</strong> ${escapeHtml(row.observacao || "Não informado")}</div>
           </div>
         </td>

@@ -79,6 +79,7 @@ mkdir -p /var/www/missas "$WEB_TMP_DIR"
 tar -C "$APP_DIR/apps/web" --exclude=node_modules --exclude=dist -cf - . \
   | docker run --rm -i \
       -e "VITE_PIX_COPIA_COLA=${VITE_PIX_COPIA_COLA:-}" \
+      -e "VITE_API_BASE=/api" \
       -w /app node:22-bookworm \
       bash -lc 'set -euo pipefail
 mkdir -p /app
@@ -87,12 +88,19 @@ cd /app
 npm install --no-fund --no-audit qrcode@1.5.4 >&2
 test -f node_modules/qrcode/package.json
 npx --yes vite build >&2
+# Fail the deploy if the public bundle still points at localhost.
+if grep -R -n --include="*.js" "127.0.0.1:8000" /app/dist >/dev/null; then
+  echo "[deploy] Built web assets still reference http://127.0.0.1:8000" >&2
+  grep -R -n --include="*.js" "127.0.0.1:8000" /app/dist >&2 || true
+  exit 1
+fi
 tar -C /app/dist -cf - .' \
   | tar -C "$WEB_TMP_DIR" -xf -
 mkdir -p "$WEB_TMP_DIR/src"
 cp "$APP_DIR/apps/web/admin.html" "$WEB_TMP_DIR/admin.html"
 test -f "$WEB_TMP_DIR/doar.html" || { echo "[deploy] Missing doar.html in vite dist" >&2; exit 1; }
 cp -r "$APP_DIR/apps/web/src/"* "$WEB_TMP_DIR/src/"
+# Admin loads unbundled /src modules; rewrite the same production API base.
 sed -i 's|http://127.0.0.1:8000|/api|g' "$WEB_TMP_DIR/src/config.js"
 
 echo "[deploy] Step 6/7: publish web files"
