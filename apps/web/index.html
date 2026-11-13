@@ -337,9 +337,14 @@
         border: 1px solid var(--line);
         border-radius: 14px;
         background: #ffffffcc;
-        text-align: center;
         color: #334155;
         font-size: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 8px 10px;
+        text-align: center;
       }
       footer a {
         color: var(--brand);
@@ -347,6 +352,22 @@
         font-weight: 700;
       }
       footer a:hover { text-decoration: underline; }
+      .footer-credit,
+      .footer-support {
+        margin: 0;
+      }
+      .footer-sep {
+        color: #94a3b8;
+        font-weight: 600;
+        user-select: none;
+      }
+      @media (max-width: 900px) {
+        footer {
+          flex-direction: column;
+          gap: 12px;
+        }
+        .footer-sep { display: none; }
+      }
       @media (max-width: 900px) {
         .tabs {
           display: grid;
@@ -619,7 +640,13 @@
       </section>
 
       <footer>
-        Feito com amor ❤️ e para Deus ✝️, por <a href="https://github.com/yurisalesc" target="_blank" rel="noopener noreferrer">Yuri Sales</a>.
+        <p class="footer-credit">
+          Feito com amor ❤️ e para Deus ✝️, por <a href="https://github.com/yurisalesc" target="_blank" rel="noopener noreferrer">Yuri Sales</a>.
+        </p>
+        <span class="footer-sep" aria-hidden="true">|</span>
+        <p class="footer-support">
+          <a href="/doar.html">🤝 Apoie nosso projeto</a>
+        </p>
       </footer>
       <datalist id="citySuggestions"></datalist>
     </div>

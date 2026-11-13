@@ -50,7 +50,7 @@ done
 grep -q 'rel="manifest"' "$DIST_DIR/index.html"
 grep -q '/manifest.webmanifest' "$DIST_DIR/index.html"
 grep -q 'serviceWorker.register("/sw.js")' "$WEB_DIR/src/main.js"
-grep -q 'missas-perto-v5' "$DIST_DIR/sw.js"
+grep -q 'missas-perto-v6' "$DIST_DIR/sw.js"
 grep -q '/api/' "$DIST_DIR/sw.js"
 
 python3 - <<PY
@@ -108,7 +108,6 @@ cp "$ROOT_DIR/scripts/pwa_sw_smoke.mjs" "$PLAYWRIGHT_DIR/pwa_sw_smoke.mjs"
 npm install --silent --prefix "$PLAYWRIGHT_DIR" playwright >/tmp/missas-pwa-playwright-install.log 2>&1
 (
   cd "$PLAYWRIGHT_DIR"
-  # Reuses ~/.cache/ms-playwright when already present.
   npx --yes playwright install chromium >/tmp/missas-pwa-playwright-browser.log 2>&1
   PWA_PREVIEW_PORT="$PORT" node ./pwa_sw_smoke.mjs
 )

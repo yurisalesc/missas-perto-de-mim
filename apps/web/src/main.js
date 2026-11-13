@@ -335,9 +335,7 @@ document.getElementById("search").addEventListener("click", runSearchHome);
 document.getElementById("search_now").addEventListener("click", runSearchNow);
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js").catch(() => {
-    // Keep app usable even when SW registration fails.
-  });
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
 
 if (dismissInstallButton) {
