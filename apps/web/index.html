@@ -4,11 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f766e" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Missas Perto" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; connect-src 'self' http://127.0.0.1:8000 https://*.tile.openstreetmap.org https://unpkg.com; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://*.tile.openstreetmap.org https://unpkg.com; worker-src 'self'; manifest-src 'self'"
     />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/icons/icon-180.png" sizes="180x180" />
+    <meta name="description" content="Encontre missas por cidade, proximidade e horário." />
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -259,6 +266,39 @@
         padding: 12px;
       }
       .city-by-state.hidden { display: none; }
+      .install-card {
+        margin-top: 12px;
+        border: 1px solid #bfe8e3;
+        border-radius: 12px;
+        background: #f3fbfa;
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .install-card.hidden { display: none; }
+      .install-copy {
+        margin: 0;
+        font-size: 13px;
+        color: #0b5f59;
+      }
+      .install-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .install-actions button {
+        min-width: 120px;
+      }
+      .install-dismiss {
+        min-width: 0 !important;
+        border-color: transparent !important;
+        background: transparent !important;
+        color: #334155 !important;
+        font-size: 12px !important;
+        padding: 6px 8px !important;
+      }
       .city-state-block + .city-state-block { margin-top: 10px; }
       .city-state-title { font-weight: 700; margin-bottom: 4px; color: #0f172a; }
       .city-state-list { color: #334155; font-size: 14px; }
@@ -323,6 +363,14 @@
           flex-direction: column;
         }
         .field-row { grid-template-columns: 1fr; }
+        .install-card {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .install-actions {
+          width: 100%;
+          justify-content: flex-start;
+        }
         .actions { flex-direction: column; }
         .actions button { width: 100%; }
         .table-actions {
@@ -355,6 +403,13 @@
         </div>
         <div class="cities-cta">
           <a href="#feedback_home" id="addCityCta">Quer ver a sua cidade no site?</a>
+        </div>
+        <div id="installCard" class="install-card hidden" aria-live="polite">
+          <p id="installMessage" class="install-copy"></p>
+          <div class="install-actions">
+            <button type="button" id="installButton" class="secondary hidden">Instalar app</button>
+            <button type="button" id="dismissInstallButton" class="install-dismiss">Fechar</button>
+          </div>
         </div>
       </header>
 
