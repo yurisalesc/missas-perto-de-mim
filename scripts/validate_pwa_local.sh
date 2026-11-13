@@ -50,7 +50,7 @@ done
 grep -q 'rel="manifest"' "$DIST_DIR/index.html"
 grep -q '/manifest.webmanifest' "$DIST_DIR/index.html"
 grep -q 'serviceWorker.register("/sw.js")' "$WEB_DIR/src/main.js"
-grep -q 'missas-perto-v3' "$DIST_DIR/sw.js"
+grep -q 'missas-perto-v5' "$DIST_DIR/sw.js"
 grep -q '/api/' "$DIST_DIR/sw.js"
 
 python3 - <<PY

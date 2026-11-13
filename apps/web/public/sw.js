@@ -1,4 +1,4 @@
-const CACHE_NAME = "missas-perto-v3";
+const CACHE_NAME = "missas-perto-v5";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
