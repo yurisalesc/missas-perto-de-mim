@@ -34,22 +34,17 @@ fi
 
 echo "[deploy] Step 3/7: start db + rebuild api (data volumes untouched)"
 
-# Start (or keep) db with its persistent volume.
 docker compose $COMPOSE_ARGS up -d db
 
-# Safety: remove stale api container before rebuilding.
-# Both running and stopped containers can cause "port already in use".
 echo "[deploy] Removing stale api container if exists"
 docker compose $COMPOSE_ARGS rm -sf api 2>/dev/null || true
 
-# Free port 8000 from any other container outside this compose project.
 API_PORT_CONTAINERS="$(docker ps -a --filter "publish=8000" --format '{{.ID}}')"
 if [ -n "$API_PORT_CONTAINERS" ]; then
   echo "[deploy] Releasing host port 8000 from: $API_PORT_CONTAINERS"
   docker rm -f $API_PORT_CONTAINERS
 fi
 
-# Free port 8000 from any non-docker host process.
 fuser -k 8000/tcp 2>/dev/null || true
 
 docker compose $COMPOSE_ARGS up -d --build --no-deps api
@@ -68,12 +63,26 @@ done
 curl -fsS http://127.0.0.1:8000/health >/dev/null
 
 echo "[deploy] Step 5/7: build web"
+WEB_ENV_FILE="${WEB_ENV_FILE:-/etc/missas/web.env}"
+if [ -f "$WEB_ENV_FILE" ]; then
+  # shellcheck disable=SC1090
+  set -a
+  source "$WEB_ENV_FILE"
+  set +a
+  echo "[deploy] Loaded web env from $WEB_ENV_FILE"
+else
+  echo "[deploy] WARNING: $WEB_ENV_FILE not found — Pix page will show empty state" >&2
+fi
 mkdir -p /var/www/missas "$WEB_TMP_DIR"
 tar -C "$APP_DIR/apps/web" -cf - . \
-  | docker run --rm -i -w /app node:22-bookworm bash -lc "set -euo pipefail; mkdir -p /app; tar -xf - -C /app; npx --yes vite build >&2; tar -C /app/dist -cf - ." \
+  | docker run --rm -i \
+      -e "VITE_PIX_COPIA_COLA=${VITE_PIX_COPIA_COLA:-}" \
+      -w /app node:22-bookworm \
+      bash -lc "set -euo pipefail; mkdir -p /app; tar -xf - -C /app; npx --yes vite build >&2; tar -C /app/dist -cf - ." \
   | tar -C "$WEB_TMP_DIR" -xf -
 mkdir -p "$WEB_TMP_DIR/src"
 cp "$APP_DIR/apps/web/admin.html" "$WEB_TMP_DIR/admin.html"
+test -f "$WEB_TMP_DIR/doar.html" || { echo "[deploy] Missing doar.html in vite dist" >&2; exit 1; }
 cp -r "$APP_DIR/apps/web/src/"* "$WEB_TMP_DIR/src/"
 sed -i 's|http://127.0.0.1:8000|/api|g' "$WEB_TMP_DIR/src/config.js"
 

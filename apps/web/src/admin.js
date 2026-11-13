@@ -96,7 +96,6 @@ async function refreshChurches() {
   if (name) params.set("nome", name);
   const path = params.toString() ? `/admin/igrejas?${params.toString()}` : "/admin/igrejas";
   const items = await apiFetch(path);
-  // Ignore stale async responses to avoid duplicate render after fast typing.
   if (requestId !== churchesRefreshRequestId) return;
   churchesCache = items;
   items.forEach((church) => {

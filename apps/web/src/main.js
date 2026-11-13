@@ -310,9 +310,7 @@ document.getElementById("clear_geo").addEventListener("click", () => {
 document.getElementById("search").addEventListener("click", runSearchHome);
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js").catch(() => {
-    // Keep app usable even when SW registration fails.
-  });
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
 
 if (dismissInstallButton) {

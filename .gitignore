@@ -1,7 +1,11 @@
 .env
 *.env
+!.env.example
+!apps/web/.env.example
 apps/api/.env
 apps/web/.env
+apps/web/.env.local
+apps/web/.env.*.local
 *.db
 __pycache__/
 .pytest_cache/
