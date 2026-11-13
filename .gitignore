@@ -8,5 +8,4 @@ __pycache__/
 apps/web/dist/
 apps/web/.vite/
 node_modules/
-PWA_MANUAL_STEPS.local.md
 *.local.md
