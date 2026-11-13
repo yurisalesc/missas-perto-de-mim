@@ -33,9 +33,6 @@ const locationStatus = document.getElementById("locationStatus");
 const allMassesTbody = document.getElementById("allMassesTbody");
 const allMassesTableWrap = document.getElementById("allMassesTableWrap");
 const allMassesMessage = document.getElementById("allMassesMessage");
-const resultsNowTbody = document.getElementById("resultsNowTbody");
-const nowResultsTableWrap = document.getElementById("nowResultsTableWrap");
-const nowResultsMessage = document.getElementById("nowResultsMessage");
 const cityByStateSection = document.getElementById("cityByStateSection");
 const cityByStateContent = document.getElementById("cityByStateContent");
 const changelogList = document.getElementById("changelogList");
@@ -265,27 +262,6 @@ async function runSearchHome() {
   plotChurches(payload);
 }
 
-async function runSearchNow() {
-  const city = document.getElementById("city_now").value.trim();
-  const params = new URLSearchParams();
-  if (city) params.set("city", city);
-  const response = await fetch(`${API_BASE}/igrejas/acontecendo-agora?${params.toString()}`);
-  const payloadRaw = await response.json();
-  const payload = sortByEarliestOccurrence(payloadRaw);
-  resultsNowTbody.innerHTML = "";
-  nowResultsTableWrap.classList.remove("hidden");
-  nowResultsMessage.textContent = "";
-  if (!Array.isArray(payload) || payload.length === 0) {
-    nowResultsTableWrap.classList.add("hidden");
-    nowResultsMessage.textContent = "Nenhuma missa acontecendo agora para esta cidade.";
-    nowResultsMessage.style.color = "#b91c1c";
-    plotChurches([]);
-    return;
-  }
-  payload.forEach((church) => appendChurchResultRow(resultsNowTbody, church));
-  plotChurches(payload);
-}
-
 document.getElementById("geo").addEventListener("click", () => {
   if (!navigator.geolocation) {
     alert("Seu navegador não suporta geolocalização.");
@@ -332,7 +308,6 @@ document.getElementById("clear_geo").addEventListener("click", () => {
 });
 
 document.getElementById("search").addEventListener("click", runSearchHome);
-document.getElementById("search_now").addEventListener("click", runSearchNow);
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {
@@ -587,7 +562,7 @@ async function loadLatestChangelog() {
   changelogAlreadyLoaded = true;
 }
 
-["city", "filtro_cidade", "city_now"].forEach((id) => {
+["city", "filtro_cidade"].forEach((id) => {
   const input = document.getElementById(id);
   input.addEventListener("input", () => loadCitySuggestions(input.value.trim()));
   input.addEventListener("focus", () => loadCitySuggestions(input.value.trim()));
@@ -601,7 +576,6 @@ function setActiveTab(tabId) {
   const tabs = [
     { btn: document.getElementById("tab-home"), panel: document.getElementById("panel-home") },
     { btn: document.getElementById("tab-all"), panel: document.getElementById("panel-all") },
-    { btn: document.getElementById("tab-now"), panel: document.getElementById("panel-now") },
     { btn: document.getElementById("tab-confessions"), panel: document.getElementById("panel-confessions") },
   ];
   tabs.forEach(({ btn, panel }) => {
@@ -614,7 +588,6 @@ function setActiveTab(tabId) {
 
 document.getElementById("tab-home").addEventListener("click", () => setActiveTab("tab-home"));
 document.getElementById("tab-all").addEventListener("click", () => setActiveTab("tab-all"));
-document.getElementById("tab-now").addEventListener("click", () => setActiveTab("tab-now"));
 document.getElementById("toggleCitiesButton").addEventListener("click", () => {
   if (!cityByStateSection) return;
   const willShow = cityByStateSection.classList.contains("hidden");

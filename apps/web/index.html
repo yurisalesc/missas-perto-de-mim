@@ -133,7 +133,7 @@
       .admin-link { margin-top: 6px; font-size: 14px; color: var(--brand); text-decoration: none; font-weight: 600; }
       .tabs {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 10px;
         margin: 10px 0 18px;
         padding: 6px;
@@ -416,7 +416,6 @@
       <nav class="tabs" role="tablist" aria-label="Seções">
         <button class="tab-btn" id="tab-home" role="tab" aria-controls="panel-home" aria-selected="true">Home</button>
         <button class="tab-btn" id="tab-all" role="tab" aria-controls="panel-all" aria-selected="false">Todas as missas</button>
-        <button class="tab-btn" id="tab-now" role="tab" aria-controls="panel-now" aria-selected="false">Acontecendo agora</button>
         <button class="tab-btn" id="tab-confessions" role="tab" aria-controls="panel-confessions" aria-selected="false" disabled>Confissões <span class="soon-tag">em breve</span></button>
       </nav>
 
@@ -565,56 +564,6 @@
         <div class="card">
           <h2>Confissões</h2>
           <p><strong>Em breve.</strong> Estamos preparando esta funcionalidade para você.</p>
-        </div>
-      </section>
-
-      <section id="panel-now" class="tab-panel" role="tabpanel" aria-labelledby="tab-now">
-        <div class="card">
-          <h2>Acontecendo agora</h2>
-          <p>Filtra apenas por cidade e considera missa em andamento por 1h30.</p>
-          <div class="field-row">
-            <div class="field">
-              <label for="city_now">Cidade</label>
-              <input id="city_now" list="citySuggestions" placeholder="Ex.: Natal" />
-            </div>
-            <div class="field">
-              <label>&nbsp;</label>
-              <button id="search_now" type="button">Buscar agora</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h2>Resultados</h2>
-          <div id="nowResultsMessage" class="empty-message"></div>
-          <div id="nowResultsTableWrap" class="table-wrap hidden">
-            <table>
-              <thead>
-                <tr>
-                  <th>Igreja</th>
-                  <th>Cidade</th>
-                  <th>Endereço</th>
-                  <th>Distância</th>
-                  <th>Horários</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="resultsNowTbody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="card">
-          <h2>Feedback</h2>
-          <p>Compartilhe melhorias gerais, novas igrejas e ajustes de horário.</p>
-          <form class="suggestionForm" data-status="#suggestionStatusNow" data-context="acontecendo-agora">
-            <div class="field">
-              <label for="feedback_now">Sua mensagem</label>
-              <textarea id="feedback_now" name="mensagem" placeholder="Ex.: incluir igreja..., missa das 19h mudou para 19h30..." required></textarea>
-            </div>
-            <button type="submit">Enviar feedback</button>
-          </form>
-          <div id="suggestionStatusNow" class="status"></div>
         </div>
       </section>
 
