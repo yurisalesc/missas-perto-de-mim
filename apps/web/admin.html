@@ -10,256 +10,545 @@
     <title>Painel Admin | Missas Perto de Mim</title>
     <style>
       :root {
-        --bg: #f4f7fb;
-        --card: #fff;
-        --line: #e2e8f0;
-        --text: #0f172a;
-        --muted: #475569;
-        --brand: #0f766e;
+        --header: #417690;
+        --header-dark: #205067;
+        --bg: #f8f8f8;
+        --module: #eee;
+        --line: #ddd;
+        --text: #333;
+        --muted: #666;
+        --link: #447e9b;
+        --primary: #417690;
+        --danger: #ba2121;
+        --ok: #0b5f59;
+        --dialog-bg: #fff;
       }
       * { box-sizing: border-box; }
       body {
         margin: 0;
         background: var(--bg);
         color: var(--text);
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      }
-      .container { width: min(1200px, 95vw); margin: 20px auto 36px; }
-      .topbar {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--card);
-      }
-      .topbar h1 { margin: 0; font-size: 20px; }
-      .topbar a { color: var(--brand); text-decoration: none; font-weight: 600; }
-      .layout { display: grid; grid-template-columns: 280px 1fr; gap: 12px; margin-top: 12px; }
-      .layout.unauthenticated { grid-template-columns: min(420px, 100%); justify-content: center; }
-      .card {
-        background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-        padding: 14px; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+        font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 14px;
       }
       .hidden { display: none !important; }
-      .card h2 { margin: 0 0 10px; font-size: 16px; }
-      .field { display: grid; gap: 6px; margin: 8px 0; }
-      label { font-size: 12px; color: var(--muted); font-weight: 700; }
-      input, select, button, textarea {
-        width: 100%; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: #fff;
+
+      .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--header);
+        color: #fff;
+        padding: 10px 20px;
       }
-      button {
-        border-color: var(--brand); background: var(--brand); color: #fff; cursor: pointer; font-weight: 600;
+      .admin-header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+      .admin-header a {
+        color: #fff;
+        text-decoration: underline;
+        font-weight: 600;
+        cursor: pointer;
       }
-      button.secondary { background: #fff; color: var(--text); border-color: var(--line); }
-      button.danger { background: #b91c1c; border-color: #b91c1c; }
-      .tabs { display: flex; gap: 8px; margin-bottom: 10px; }
-      .tab-btn { background: #fff; color: #0f172a; border-color: var(--line); width: auto; }
-      .tab-btn.active { background: #e6f6f4; color: #0b5f59; border-color: #ccefeb; }
+
+      .login-wrap {
+        min-height: calc(100vh - 48px);
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+      .login-card {
+        width: min(420px, 100%);
+        background: #fff;
+        border: 1px solid var(--line);
+        padding: 20px;
+      }
+      .login-card h2 { margin: 0 0 12px; font-size: 18px; }
+
+      .admin-shell { display: none; }
+      body.is-authenticated .login-wrap { display: none; }
+      body.is-authenticated .admin-shell { display: block; }
+      body:not(.is-authenticated) #logoutLink { display: none; }
+
+      .module-nav {
+        display: flex;
+        gap: 0;
+        background: var(--module);
+        border-bottom: 1px solid var(--line);
+        padding: 0 12px;
+        overflow-x: auto;
+      }
+      .tab-btn {
+        border: 0;
+        background: transparent;
+        color: var(--text);
+        padding: 12px 14px;
+        cursor: pointer;
+        font-weight: 600;
+        border-bottom: 3px solid transparent;
+        width: auto;
+      }
+      .tab-btn.active {
+        border-bottom-color: var(--header);
+        color: var(--header-dark);
+      }
+
+      .content { padding: 16px 20px 40px; }
       .tab-panel { display: none; }
       .tab-panel.active { display: block; }
-      .status { min-height: 18px; color: #0b5f59; font-size: 13px; margin-top: 8px; }
-      table { width: 100%; border-collapse: collapse; font-size: 13px; }
-      th, td { border-bottom: 1px solid var(--line); text-align: left; padding: 8px 6px; vertical-align: top; }
-      th { color: var(--muted); font-weight: 700; }
-      .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-      .actions { display: flex; gap: 6px; }
-      .actions button { width: auto; padding: 6px 8px; font-size: 12px; }
-      @media (max-width: 1000px) {
-        .layout { grid-template-columns: 1fr; }
+
+      .changelist-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+      .changelist-header h2 { margin: 0; font-size: 20px; }
+      .object-tools a, .object-tools button, button.default {
+        background: var(--primary);
+        color: #fff;
+        border: 0;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        width: auto;
+      }
+      button.secondary {
+        background: #fff;
+        color: var(--text);
+        border: 1px solid var(--line);
+        padding: 8px 12px;
+        cursor: pointer;
+        width: auto;
+      }
+      button.danger {
+        background: var(--danger);
+        color: #fff;
+        border: 0;
+        padding: 6px 10px;
+        cursor: pointer;
+        width: auto;
+      }
+      button.linkish {
+        background: none;
+        border: 0;
+        color: var(--link);
+        padding: 0;
+        cursor: pointer;
+        width: auto;
+        font-weight: 600;
+        text-decoration: underline;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: end;
+        margin-bottom: 10px;
+        padding: 10px;
+        background: #fff;
+        border: 1px solid var(--line);
+      }
+      .field { display: grid; gap: 4px; }
+      .field label { font-size: 12px; color: var(--muted); font-weight: 700; }
+      input, select, textarea, button {
+        font: inherit;
+      }
+      input, select, textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+      textarea { min-height: 90px; resize: vertical; }
+
+      table.results {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+        border: 1px solid var(--line);
+      }
+      table.results th, table.results td {
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        padding: 8px 10px;
+        vertical-align: top;
+      }
+      table.results th {
+        background: #f0f0f0;
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+      .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+      .paginator {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+      }
+      .paginator .pages { color: var(--muted); }
+
+      .module-card {
+        background: #fff;
+        border: 1px solid var(--line);
+        padding: 14px;
+        margin-bottom: 12px;
+      }
+      .module-card h3 { margin: 0 0 8px; font-size: 16px; }
+      .module-card p { margin: 0 0 10px; color: var(--muted); }
+
+      .status { min-height: 18px; color: var(--ok); font-size: 13px; margin-top: 8px; }
+      .status.is-error { color: var(--danger); }
+
+      .dialog-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        display: grid;
+        place-items: center;
+        padding: 16px;
+        z-index: 40;
+      }
+      .dialog {
+        width: min(920px, 100%);
+        max-height: calc(100vh - 32px);
+        overflow: auto;
+        background: var(--dialog-bg);
+        border: 1px solid var(--line);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+      }
+      .dialog-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        background: var(--header);
+        color: #fff;
+        position: sticky;
+        top: 0;
+      }
+      .dialog-header h3 { margin: 0; font-size: 16px; }
+      .dialog-header button {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.5);
+        color: #fff;
+        padding: 4px 10px;
+        cursor: pointer;
+        width: auto;
+      }
+      .dialog-body { padding: 16px; }
+      .dialog-footer {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        padding: 12px 16px;
+        border-top: 1px solid var(--line);
+        background: #fafafa;
+        position: sticky;
+        bottom: 0;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .inline-section {
+        margin-top: 18px;
+        border-top: 1px solid var(--line);
+        padding-top: 14px;
+      }
+      .inline-section h4 { margin: 0 0 8px; font-size: 14px; }
+      .inline-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+      .inline-table th, .inline-table td {
+        border: 1px solid var(--line);
+        padding: 6px;
+        vertical-align: middle;
+      }
+      .inline-table th { background: #f5f5f5; font-size: 12px; }
+      .inline-table input, .inline-table select { width: 100%; }
+      @media (max-width: 800px) {
         .grid-2 { grid-template-columns: 1fr; }
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <div class="topbar">
-        <h1>Painel Admin</h1>
-        <a href="/">Voltar para app</a>
-      </div>
+    <header class="admin-header">
+      <h1>Missas Perto de Mim · Admin</h1>
+      <a id="logoutLink" href="#">Log out</a>
+    </header>
 
-      <div class="layout unauthenticated" id="adminLayout">
-        <aside class="card">
-          <h2>Autenticação</h2>
-          <form id="authForm">
-            <div class="field">
-              <label for="admin_user">Usuário</label>
-              <input id="admin_user" placeholder="admin" required />
-            </div>
-            <div class="field">
-              <label for="admin_pass">Senha</label>
-              <input id="admin_pass" type="password" placeholder="••••••••" required />
-            </div>
-            <button type="submit">Entrar</button>
-            <button type="button" id="logoutBtn" class="secondary" style="margin-top: 8px;">Sair</button>
-          </form>
-          <div id="authStatus" class="status"></div>
-        </aside>
-
-        <main id="adminMain" class="card hidden">
-          <div class="tabs">
-            <button class="tab-btn active" data-tab="churches">Igrejas</button>
-            <button class="tab-btn" data-tab="schedules">Horários</button>
-            <button class="tab-btn" data-tab="suggestions">Sugestões</button>
-            <button class="tab-btn" data-tab="changelog">Changelog</button>
-            <button class="tab-btn" data-tab="import">Importação CSV</button>
+    <div class="login-wrap" id="loginWrap">
+      <div class="login-card">
+        <h2>Autenticação</h2>
+        <form id="authForm">
+          <div class="field">
+            <label for="admin_user">Usuário</label>
+            <input id="admin_user" placeholder="admin" required autocomplete="username" />
           </div>
+          <div class="field" style="margin-top: 10px;">
+            <label for="admin_pass">Senha</label>
+            <input id="admin_pass" type="password" placeholder="••••••••" required autocomplete="current-password" />
+          </div>
+          <div style="margin-top: 14px;">
+            <button type="submit" class="default">Entrar</button>
+          </div>
+        </form>
+        <div id="authStatus" class="status"></div>
+      </div>
+    </div>
 
-          <section id="tab-churches" class="tab-panel active">
+    <div class="admin-shell" id="adminShell">
+      <nav class="module-nav">
+        <button class="tab-btn active" data-tab="churches" type="button">Igrejas</button>
+        <button class="tab-btn" data-tab="suggestions" type="button">Sugestões</button>
+        <button class="tab-btn" data-tab="changelog" type="button">Changelog</button>
+        <button class="tab-btn" data-tab="import" type="button">Importação CSV</button>
+      </nav>
+
+      <div class="content">
+        <section id="tab-churches" class="tab-panel active">
+          <div class="changelist-header">
             <h2>Igrejas</h2>
-            <div class="card">
-              <h2 id="churchFormTitle">Criar igreja</h2>
-              <form id="churchForm">
-                <div class="field"><label>Nome</label><input name="nome" required /></div>
-                <div class="field"><label>Endereço</label><input name="endereco" required /></div>
-                <div class="field"><label>Cidade</label><input name="cidade" required /></div>
-                <div class="field"><label>Latitude</label><input name="latitude" type="number" step="any" required /></div>
-                <div class="field"><label>Longitude</label><input name="longitude" type="number" step="any" required /></div>
-                <div class="field"><label>Telefone</label><input name="telefone" placeholder="Ex.: (84) 99999-9999" /></div>
-                <div class="field"><label>Redes sociais / Site</label><input name="redes_sociais_site" placeholder="Ex.: @paroquia ou dominio.com.br" /></div>
-                <div class="field"><label>Observação</label><input name="observacao" placeholder="Ex.: Sede Arquidiocesana" /></div>
-                <div class="actions">
-                  <button type="submit" id="churchSubmitBtn">Salvar igreja</button>
-                  <button type="button" id="churchCancelEditBtn" class="secondary">Cancelar edição</button>
-                </div>
-              </form>
-              <div id="churchStatus" class="status"></div>
+            <div class="object-tools">
+              <button type="button" id="addChurchBtn" class="default">Adicionar igreja</button>
             </div>
-            <div class="card" style="margin-top:10px;">
-              <h2>Lista de igrejas</h2>
-              <div class="grid-2">
-                <div class="field">
-                  <label for="churchSearchCity">Filtrar por cidade</label>
-                  <input id="churchSearchCity" placeholder="Ex.: Natal" />
-                </div>
-                <div class="field">
-                  <label for="churchSearchName">Filtrar por nome</label>
-                  <input id="churchSearchName" placeholder="Ex.: Nossa Senhora" />
-                </div>
-              </div>
-              <button id="refreshChurches" type="button" class="secondary">Atualizar</button>
-              <div style="overflow:auto; margin-top: 8px;">
-                <table>
-                  <thead><tr><th>ID</th><th>Nome</th><th>Cidade</th><th>Telefone</th><th>Redes/Site</th><th>Ações</th></tr></thead>
-                  <tbody id="churchesTbody"></tbody>
-                </table>
-              </div>
+          </div>
+          <div class="toolbar">
+            <div class="field">
+              <label for="churchSearchCity">Filtrar por cidade</label>
+              <input id="churchSearchCity" placeholder="Ex.: Natal" />
             </div>
-          </section>
+            <div class="field">
+              <label for="churchSearchName">Filtrar por nome</label>
+              <input id="churchSearchName" placeholder="Ex.: Nossa Senhora" />
+            </div>
+            <button id="refreshChurches" type="button" class="secondary">Atualizar</button>
+          </div>
+          <div style="overflow:auto;">
+            <table class="results">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nome</th>
+                  <th>Cidade</th>
+                  <th>Estado</th>
+                  <th>Telefone</th>
+                  <th>Redes/Site</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="churchesTbody"></tbody>
+            </table>
+          </div>
+          <div class="paginator" id="churchesPaginator"></div>
+          <div id="churchStatus" class="status"></div>
+        </section>
 
-          <section id="tab-schedules" class="tab-panel">
-            <h2>Horários</h2>
-            <div class="grid-2">
-              <div class="card">
-                <h2>Criar horário</h2>
-                <form id="scheduleForm">
-                  <div class="field"><label>ID da igreja</label><input name="church_id" type="number" required /></div>
-                  <div class="field"><label>Dia da semana (0-6)</label><input name="dia_semana" type="number" min="0" max="6" required /></div>
-                  <div class="field"><label>Hora</label><input name="horario" type="time" required /></div>
-                  <div class="field"><label>Observação</label><input name="observacao" placeholder="Opcional" /></div>
-                  <button type="submit">Salvar horário</button>
-                </form>
-                <div id="scheduleStatus" class="status"></div>
-              </div>
-              <div class="card">
-                <h2>Lista de horários</h2>
-                <button id="refreshSchedules" type="button" class="secondary">Atualizar</button>
-                <div style="overflow:auto; margin-top:8px;">
-                  <table>
-                    <thead><tr><th>ID</th><th>Igreja</th><th>Dia</th><th>Hora</th><th>Ações</th></tr></thead>
-                    <tbody id="schedulesTbody"></tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section id="tab-suggestions" class="tab-panel">
+        <section id="tab-suggestions" class="tab-panel">
+          <div class="changelist-header">
             <h2>Sugestões</h2>
             <button id="refreshSuggestions" class="secondary" type="button">Atualizar</button>
-            <div style="overflow:auto; margin-top:8px;">
-              <table>
-                <thead>
-                  <tr><th>ID</th><th>Status</th><th>Igreja</th><th>Cidade</th><th>Mensagem</th><th>Ações</th></tr>
-                </thead>
-                <tbody id="suggestionsTbody"></tbody>
-              </table>
-            </div>
-            <div id="suggestionStatus" class="status"></div>
-          </section>
+          </div>
+          <div style="overflow:auto;">
+            <table class="results">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Status</th>
+                  <th>Igreja</th>
+                  <th>Cidade</th>
+                  <th>Mensagem</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="suggestionsTbody"></tbody>
+            </table>
+          </div>
+          <div class="paginator" id="suggestionsPaginator"></div>
+          <div id="suggestionStatus" class="status"></div>
+        </section>
 
-          <section id="tab-changelog" class="tab-panel">
+        <section id="tab-changelog" class="tab-panel">
+          <div class="changelist-header">
             <h2>Changelog</h2>
-            <div class="grid-2">
-              <div class="card">
-                <h2 id="changelogFormTitle">Nova atualização</h2>
-                <form id="changelogForm">
-                  <div class="field">
-                    <label for="changelog_title">Título</label>
-                    <input id="changelog_title" name="title" required />
-                  </div>
-                  <div class="field">
-                    <label for="changelog_description">Descrição</label>
-                    <textarea id="changelog_description" name="description" required></textarea>
-                  </div>
-                  <div class="field">
-                    <label for="changelog_badge">Badge</label>
-                    <select id="changelog_badge" name="badge" required>
-                      <option value="new">Novo</option>
-                      <option value="improved">Melhoria</option>
-                      <option value="fixed">Correção</option>
-                    </select>
-                  </div>
-                  <div class="field">
-                    <label for="changelog_published_at">Data de publicação (opcional)</label>
-                    <input id="changelog_published_at" name="published_at" type="datetime-local" />
-                  </div>
-                  <div class="actions">
-                    <button type="submit" id="changelogSubmitBtn">Salvar atualização</button>
-                    <button type="button" id="changelogCancelEditBtn" class="secondary">Cancelar edição</button>
-                  </div>
-                </form>
-                <div id="changelogStatus" class="status"></div>
-              </div>
-              <div class="card">
-                <h2>Lista de atualizações</h2>
-                <button id="refreshChangelog" class="secondary" type="button">Atualizar</button>
-                <div style="overflow:auto; margin-top:8px;">
-                  <table>
-                    <thead>
-                      <tr><th>ID</th><th>Título</th><th>Badge</th><th>Publicada em</th><th>Ações</th></tr>
-                    </thead>
-                    <tbody id="changelogTbody"></tbody>
-                  </table>
-                </div>
-              </div>
+            <div class="object-tools">
+              <button type="button" id="addChangelogBtn" class="default">Adicionar atualização</button>
             </div>
-          </section>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <button id="refreshChangelog" class="secondary" type="button">Atualizar</button>
+          </div>
+          <div style="overflow:auto;">
+            <table class="results">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Título</th>
+                  <th>Badge</th>
+                  <th>Publicada em</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="changelogTbody"></tbody>
+            </table>
+          </div>
+          <div class="paginator" id="changelogPaginator"></div>
+          <div id="changelogStatus" class="status"></div>
+        </section>
 
-          <section id="tab-import" class="tab-panel">
+        <section id="tab-import" class="tab-panel">
+          <div class="changelist-header">
             <h2>Importação CSV</h2>
-            <div class="card">
-              <h2>Exportar banco</h2>
-              <p style="margin: 0 0 10px; color: #475569;">Baixa um CSV com os dados atuais de igrejas e horários.</p>
-              <button id="exportCsvBtn" type="button" class="secondary">Exportar e baixar CSV</button>
-              <div id="exportStatus" class="status"></div>
+          </div>
+          <div class="module-card">
+            <h3>Exportar banco</h3>
+            <p>
+              Baixa um CSV wide com igrejas, horários de missa (Seg–Dom) e intervalos de confissão
+              (Conf Seg–Conf Dom no formato <code>15:00 - 17:00; 19:00 - 21:00</code>).
+            </p>
+            <button id="exportCsvBtn" type="button" class="secondary">Exportar e baixar CSV</button>
+            <div id="exportStatus" class="status"></div>
+          </div>
+          <div class="module-card">
+            <h3>Importar e popular banco</h3>
+            <p>
+              CSVs antigos (somente missas) continuam válidos. Colunas <code>Conf Seg</code>…
+              <code>Conf Dom</code> são opcionais. Com “substituir”, confissões ausentes no arquivo não são recriadas.
+            </p>
+            <form id="csvForm">
+              <div class="field">
+                <label for="csvFile">Arquivo CSV</label>
+                <input id="csvFile" type="file" accept=".csv,text/csv" required />
+              </div>
+              <div class="field" style="margin-top: 10px;">
+                <label>
+                  <input id="replaceExisting" type="checkbox" checked />
+                  Substituir dados atuais (recomendado)
+                </label>
+              </div>
+              <div style="margin-top: 12px;">
+                <button type="submit" class="default">Importar e popular banco</button>
+              </div>
+            </form>
+            <div id="csvStatus" class="status"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div id="churchDialog" class="dialog-backdrop hidden">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="churchDialogTitle">
+        <div class="dialog-header">
+          <h3 id="churchDialogTitle">Adicionar igreja</h3>
+          <button type="button" data-close-church>Fechar</button>
+        </div>
+        <form id="churchForm">
+          <div class="dialog-body">
+            <div class="grid-2">
+              <div class="field"><label>Nome</label><input name="nome" required /></div>
+              <div class="field"><label>Cidade</label><input name="cidade" required /></div>
+              <div class="field"><label>Estado (UF)</label><input name="estado" maxlength="2" placeholder="RN" /></div>
+              <div class="field"><label>Endereço</label><input name="endereco" required /></div>
+              <div class="field"><label>Latitude</label><input name="latitude" type="number" step="any" required /></div>
+              <div class="field"><label>Longitude</label><input name="longitude" type="number" step="any" required /></div>
+              <div class="field"><label>Telefone</label><input name="telefone" placeholder="Ex.: (84) 99999-9999" /></div>
+              <div class="field"><label>Redes sociais / Site</label><input name="redes_sociais_site" placeholder="Ex.: @paroquia" /></div>
             </div>
-            <div class="card" style="margin-top:10px;">
-              <h2>Importar e popular banco</h2>
-              <form id="csvForm">
-                <div class="field">
-                  <label for="csvFile">Arquivo CSV</label>
-                  <input id="csvFile" type="file" accept=".csv,text/csv" required />
-                </div>
-                <div class="field">
-                  <label><input id="replaceExisting" type="checkbox" checked /> Substituir dados atuais (recomendado)</label>
-                </div>
-                <button type="submit">Importar e popular banco</button>
-              </form>
-              <div id="csvStatus" class="status"></div>
+            <div class="field" style="margin-top: 10px;">
+              <label>Observação</label>
+              <input name="observacao" placeholder="Ex.: Sede Arquidiocesana" />
             </div>
-          </section>
-        </main>
+
+            <div class="inline-section">
+              <h4>Horários de missa</h4>
+              <table class="inline-table">
+                <thead>
+                  <tr>
+                    <th>Dia</th>
+                    <th>Horário</th>
+                    <th>Observação</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="massTimesBody"></tbody>
+              </table>
+              <button type="button" class="secondary" id="addMassTimeBtn">Adicionar horário de missa</button>
+            </div>
+
+            <div class="inline-section">
+              <h4>Horários de confissão</h4>
+              <table class="inline-table">
+                <thead>
+                  <tr>
+                    <th>Dia</th>
+                    <th>Início</th>
+                    <th>Fim</th>
+                    <th>Observação</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="confessionTimesBody"></tbody>
+              </table>
+              <button type="button" class="secondary" id="addConfessionTimeBtn">Adicionar horário de confissão</button>
+            </div>
+            <div id="churchDialogStatus" class="status"></div>
+          </div>
+          <div class="dialog-footer">
+            <button type="button" class="secondary" data-close-church>Cancelar</button>
+            <button type="submit" class="default" id="churchSubmitBtn">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="changelogDialog" class="dialog-backdrop hidden">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="changelogDialogTitle">
+        <div class="dialog-header">
+          <h3 id="changelogDialogTitle">Adicionar atualização</h3>
+          <button type="button" data-close-changelog>Fechar</button>
+        </div>
+        <form id="changelogForm">
+          <div class="dialog-body">
+            <div class="field">
+              <label for="changelog_title">Título</label>
+              <input id="changelog_title" name="title" required />
+            </div>
+            <div class="field" style="margin-top: 10px;">
+              <label for="changelog_description">Descrição</label>
+              <textarea id="changelog_description" name="description" required></textarea>
+            </div>
+            <div class="grid-2" style="margin-top: 10px;">
+              <div class="field">
+                <label for="changelog_badge">Badge</label>
+                <select id="changelog_badge" name="badge" required>
+                  <option value="new">Novo</option>
+                  <option value="improved">Melhoria</option>
+                  <option value="fixed">Correção</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="changelog_published_at">Data de publicação (opcional)</label>
+                <input id="changelog_published_at" name="published_at" type="datetime-local" />
+              </div>
+            </div>
+            <div id="changelogDialogStatus" class="status"></div>
+          </div>
+          <div class="dialog-footer">
+            <button type="button" class="secondary" data-close-changelog>Cancelar</button>
+            <button type="submit" class="default" id="changelogSubmitBtn">Salvar</button>
+          </div>
+        </form>
       </div>
     </div>
 
     <script type="module" src="/src/admin.js"></script>
   </body>
 </html>
-
