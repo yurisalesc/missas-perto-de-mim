@@ -9,6 +9,8 @@ apps/web/.env.*.local
 *.db
 __pycache__/
 .pytest_cache/
+.venv/
+**/venv/
 apps/web/dist/
 apps/web/.vite/
 node_modules/
