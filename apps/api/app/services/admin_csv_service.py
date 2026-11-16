@@ -14,12 +14,25 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.core.text_normalization import expand_nossa_senhora, normalize_city_name
 from app.models.church import Church
+from app.models.confession_schedule import ConfessionSchedule
 from app.models.mass_schedule import MassSchedule
 
 MAX_CSV_SIZE_BYTES = 2 * 1024 * 1024
 REQUIRED_COLUMNS = {"nome", "endereco", "cidade", "latitude", "longitude"}
 WEEKDAY_COLUMNS = [("Seg", 0), ("Ter", 1), ("Qua", 2), ("Qui", 3), ("Sex", 4), ("Sab", 5), ("Dom", 6)]
+CONFESSION_WEEKDAY_COLUMNS = [
+    ("Conf Seg", 0),
+    ("Conf Ter", 1),
+    ("Conf Qua", 2),
+    ("Conf Qui", 3),
+    ("Conf Sex", 4),
+    ("Conf Sab", 5),
+    ("Conf Dom", 6),
+]
 REQUIRED_POPULATE_COLUMNS = {"Nome da Instituição", "Endereço", "Cidade"}
+_RANGE_PATTERN = re.compile(
+    r"(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})"
+)
 
 
 class AdminCsvService:
@@ -53,6 +66,41 @@ class AdminCsvService:
         return parsed
 
     @staticmethod
+    def _parse_time_parts(hours: int, minutes: int) -> time | None:
+        if 0 <= hours <= 23 and 0 <= minutes <= 59:
+            return time(hours, minutes)
+        return None
+
+    @classmethod
+    def _parse_confession_ranges(cls, raw: str | None) -> list[tuple[time, time]]:
+        value = (raw or "").strip()
+        if not value or value == "-":
+            return []
+
+        ranges: list[tuple[time, time]] = []
+        for chunk in value.split(";"):
+            piece = chunk.strip()
+            if not piece:
+                continue
+            match = _RANGE_PATTERN.fullmatch(piece)
+            if not match:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid confession range: {piece!r}. Use 'HH:MM - HH:MM'.",
+                )
+            start = cls._parse_time_parts(int(match.group(1)), int(match.group(2)))
+            end = cls._parse_time_parts(int(match.group(3)), int(match.group(4)))
+            if start is None or end is None:
+                raise HTTPException(status_code=400, detail=f"Invalid confession time in {piece!r}")
+            if end <= start:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Confession range end must be after start: {piece!r}",
+                )
+            ranges.append((start, end))
+        return ranges
+
+    @staticmethod
     def _parse_coordinate(raw: str | None, *, is_latitude: bool) -> float | None:
         value = (raw or "").strip().replace(",", ".")
         if not value:
@@ -72,6 +120,13 @@ class AdminCsvService:
     @staticmethod
     def _sort_time_strings(values: list[str]) -> list[str]:
         return sorted(set(values), key=lambda value: int(value.split(":")[0]) * 60 + int(value.split(":")[1]))
+
+    @staticmethod
+    def _format_confession_ranges(ranges: list[tuple[time, time]]) -> str:
+        ordered = sorted(ranges, key=lambda item: (item[0].hour * 60 + item[0].minute, item[1]))
+        return "; ".join(
+            f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')}" for start, end in ordered
+        )
 
     @staticmethod
     def _decode_rows(content: bytes) -> tuple[list[dict], set[str]]:
@@ -150,6 +205,7 @@ class AdminCsvService:
 
         created_churches = 0
         created_schedules = 0
+        created_confession_schedules = 0
         deleted_confession_schedules = 0
         try:
             if replace_existing:
@@ -206,7 +262,25 @@ class AdminCsvService:
                             )
                         )
                         created_schedules += 1
+
+                for column_name, weekday in CONFESSION_WEEKDAY_COLUMNS:
+                    if column_name not in columns:
+                        continue
+                    for start, end in self._parse_confession_ranges(row.get(column_name)):
+                        self.db.add(
+                            ConfessionSchedule(
+                                church_id=church.id,
+                                dia_semana=weekday,
+                                horario_inicio=start,
+                                horario_fim=end,
+                                observacao=self._read_optional(row, "Flags", "flags"),
+                            )
+                        )
+                        created_confession_schedules += 1
             self.db.commit()
+        except HTTPException:
+            self.db.rollback()
+            raise
         except Exception as exc:  # noqa: BLE001
             self.db.rollback()
             raise HTTPException(status_code=400, detail=f"Failed to populate database: {exc}") from exc
@@ -214,12 +288,25 @@ class AdminCsvService:
         return {
             "created_churches": created_churches,
             "created_schedules": created_schedules,
+            "created_confession_schedules": created_confession_schedules,
             "deleted_confession_schedules": deleted_confession_schedules,
             "replace_existing": replace_existing,
         }
 
-    def export_database_csv_response(self) -> StreamingResponse:
-        churches = self.db.execute(select(Church).options(joinedload(Church.mass_times))).unique().scalars().all()
+    def build_export_csv(self) -> str:
+        """Build the wide CSV export content as a UTF-8 text string."""
+
+        churches = (
+            self.db.execute(
+                select(Church).options(
+                    joinedload(Church.mass_times),
+                    joinedload(Church.confession_times),
+                )
+            )
+            .unique()
+            .scalars()
+            .all()
+        )
 
         output = StringIO()
         writer = csv.writer(output)
@@ -239,6 +326,13 @@ class AdminCsvService:
                 "Sex",
                 "Sab",
                 "Dom",
+                "Conf Seg",
+                "Conf Ter",
+                "Conf Qua",
+                "Conf Qui",
+                "Conf Sex",
+                "Conf Sab",
+                "Conf Dom",
                 "Flags",
                 "latitude",
                 "longitude",
@@ -247,11 +341,16 @@ class AdminCsvService:
 
         for church in churches:
             by_day: dict[int, list[str]] = {i: [] for i in range(7)}
+            confession_by_day: dict[int, list[tuple[time, time]]] = {i: [] for i in range(7)}
             schedule_notes: list[str] = []
             for schedule in church.mass_times:
                 by_day[schedule.dia_semana].append(schedule.horario.strftime("%H:%M"))
                 if schedule.observacao:
                     schedule_notes.append(schedule.observacao.strip())
+            for schedule in church.confession_times:
+                confession_by_day[schedule.dia_semana].append(
+                    (schedule.horario_inicio, schedule.horario_fim)
+                )
 
             writer.writerow(
                 [
@@ -269,12 +368,25 @@ class AdminCsvService:
                     ", ".join(self._sort_time_strings(by_day[4])),
                     ", ".join(self._sort_time_strings(by_day[5])),
                     ", ".join(self._sort_time_strings(by_day[6])),
+                    self._format_confession_ranges(confession_by_day[0]),
+                    self._format_confession_ranges(confession_by_day[1]),
+                    self._format_confession_ranges(confession_by_day[2]),
+                    self._format_confession_ranges(confession_by_day[3]),
+                    self._format_confession_ranges(confession_by_day[4]),
+                    self._format_confession_ranges(confession_by_day[5]),
+                    self._format_confession_ranges(confession_by_day[6]),
                     church.observacao or (schedule_notes[0] if schedule_notes else ""),
                     f"{church.latitude:.6f}",
                     f"{church.longitude:.6f}",
                 ]
             )
 
-        output.seek(0)
+        return output.getvalue()
+
+    def export_database_csv_response(self) -> StreamingResponse:
         headers = {"Content-Disposition": "attachment; filename=missas_export.csv"}
-        return StreamingResponse(iter([output.getvalue()]), media_type="text/csv; charset=utf-8", headers=headers)
+        return StreamingResponse(
+            iter([self.build_export_csv()]),
+            media_type="text/csv; charset=utf-8",
+            headers=headers,
+        )
