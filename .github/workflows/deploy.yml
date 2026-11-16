@@ -37,10 +37,16 @@ jobs:
           debug: true
           script_stop: false
           script: |
+            set -euo pipefail
             APP_DIR="${{ secrets.VPS_APP_DIR }}"
             if [ -z "$APP_DIR" ]; then
               APP_DIR="/opt/missas-perto-de-mim"
             fi
             cd "$APP_DIR"
-            chmod +x scripts/deploy_production.sh
+            # Sync first so this run executes the script from origin/main,
+            # not a stale copy still open from a previous deploy attempt.
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+            chmod +x scripts/deploy_production.sh scripts/vite_docker_build.sh
             APP_DIR="$APP_DIR" bash scripts/deploy_production.sh

@@ -76,24 +76,16 @@ else
   echo "[deploy] WARNING: $WEB_ENV_FILE not found — Pix page will show empty state" >&2
 fi
 mkdir -p /var/www/missas "$WEB_TMP_DIR"
+VITE_BUILD_SCRIPT="$APP_DIR/scripts/vite_docker_build.sh"
+test -f "$VITE_BUILD_SCRIPT" || { echo "[deploy] Missing $VITE_BUILD_SCRIPT" >&2; exit 1; }
+chmod +x "$VITE_BUILD_SCRIPT"
 tar -C "$APP_DIR/apps/web" --exclude=node_modules --exclude=dist -cf - . \
   | docker run --rm -i \
       -e "VITE_PIX_COPIA_COLA=${VITE_PIX_COPIA_COLA:-}" \
       -e "VITE_API_BASE=/api" \
+      -v "$VITE_BUILD_SCRIPT:/vite_docker_build.sh:ro" \
       -w /app node:22-bookworm \
-      bash -lc 'set -euo pipefail
-mkdir -p /app
-tar -xf - -C /app
-cd /app
-npm install --no-fund --no-audit qrcode@1.5.4 >&2
-test -f node_modules/qrcode/package.json
-npx --yes vite build >&2
-if ! grep -R -E --include="*.js" "window\.__API_BASE__\|\|.*/api|/api\"" /app/dist >/dev/null; then
-  echo "[deploy] Built web assets missing production API_BASE=/api" >&2
-  grep -R -n --include="*.js" -E "window\.__API_BASE__|127\.0\.0\.1:8000|/api" /app/dist >&2 || true
-  exit 1
-fi
-tar -C /app/dist -cf - .' \
+      bash /vite_docker_build.sh \
   | tar -C "$WEB_TMP_DIR" -xf -
 mkdir -p "$WEB_TMP_DIR/src"
 cp "$APP_DIR/apps/web/admin.html" "$WEB_TMP_DIR/admin.html"
