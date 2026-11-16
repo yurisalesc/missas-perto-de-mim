@@ -7,7 +7,7 @@ function defaultApiBase() {
 }
 
 export const API_BASE =
-  window.__API_BASE__ || import.meta.env.VITE_API_BASE || defaultApiBase();
+  window.__API_BASE__ || import.meta.env?.VITE_API_BASE || defaultApiBase();
 
 export const PIX_COPIA_COLA =
-  import.meta.env.VITE_PIX_COPIA_COLA || window.__PIX_COPIA_COLA__ || "";
+  import.meta.env?.VITE_PIX_COPIA_COLA || window.__PIX_COPIA_COLA__ || "";
