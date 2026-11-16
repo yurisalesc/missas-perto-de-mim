@@ -43,8 +43,6 @@ jobs:
               APP_DIR="/opt/missas-perto-de-mim"
             fi
             cd "$APP_DIR"
-            # Sync first so this run executes the script from origin/main,
-            # not a stale copy still open from a previous deploy attempt.
             git fetch origin main
             git reset --hard origin/main
             git clean -fd

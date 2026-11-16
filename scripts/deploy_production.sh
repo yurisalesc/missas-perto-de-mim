@@ -78,8 +78,6 @@ fi
 mkdir -p /var/www/missas "$WEB_TMP_DIR"
 VITE_BUILD_SCRIPT="$APP_DIR/scripts/vite_docker_build.sh"
 test -f "$VITE_BUILD_SCRIPT" || { echo "[deploy] Missing $VITE_BUILD_SCRIPT" >&2; exit 1; }
-# Stage web sources + build script into one tar so Docker needs no bind mounts
-# (VPS Docker may reject host bind mounts with read-only filesystem errors).
 WEB_STAGE="$(mktemp -d)"
 cleanup_web_stage() { rm -rf "$WEB_STAGE"; }
 trap cleanup_web_stage EXIT
