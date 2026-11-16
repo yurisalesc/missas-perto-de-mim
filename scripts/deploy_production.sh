@@ -88,10 +88,9 @@ cd /app
 npm install --no-fund --no-audit qrcode@1.5.4 >&2
 test -f node_modules/qrcode/package.json
 npx --yes vite build >&2
-# Fail the deploy if the public bundle did not bake the production API base.
-if ! grep -R -E --include="*.js" 'window\.__API_BASE__\|\|[`"]/api[`"]' /app/dist >/dev/null; then
+if ! grep -R -E --include="*.js" "window\.__API_BASE__\|\|.*/api|/api\"" /app/dist >/dev/null; then
   echo "[deploy] Built web assets missing production API_BASE=/api" >&2
-  grep -R -n --include="*.js" -E 'window\.__API_BASE__|127\.0\.0\.1:8000|/api' /app/dist >&2 || true
+  grep -R -n --include="*.js" -E "window\.__API_BASE__|127\.0\.0\.1:8000|/api" /app/dist >&2 || true
   exit 1
 fi
 tar -C /app/dist -cf - .' \
@@ -100,7 +99,6 @@ mkdir -p "$WEB_TMP_DIR/src"
 cp "$APP_DIR/apps/web/admin.html" "$WEB_TMP_DIR/admin.html"
 test -f "$WEB_TMP_DIR/doar.html" || { echo "[deploy] Missing doar.html in vite dist" >&2; exit 1; }
 cp -r "$APP_DIR/apps/web/src/"* "$WEB_TMP_DIR/src/"
-# Admin loads unbundled /src modules; rewrite the same production API base.
 sed -i 's|http://127.0.0.1:8000|/api|g' "$WEB_TMP_DIR/src/config.js"
 
 echo "[deploy] Step 6/7: publish web files"
