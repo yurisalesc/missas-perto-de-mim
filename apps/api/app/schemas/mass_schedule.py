@@ -33,3 +33,19 @@ class MassScheduleOut(MassScheduleBase):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class MassScheduleNested(BaseModel):
+    """Nested mass schedule for church create/update payloads."""
+
+    dia_semana: int = Field(ge=0, le=6)
+    horario: time
+    observacao: str | None = Field(default=None, max_length=255)
+
+
+class MassScheduleNestedOut(MassScheduleNested):
+    """Nested mass schedule in church detail responses."""
+
+    id: int
+
+    model_config = ConfigDict(from_attributes=True)

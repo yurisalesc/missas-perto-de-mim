@@ -13,6 +13,7 @@ export default {
       input: {
         main: resolve(root, "index.html"),
         doar: resolve(root, "doar.html"),
+        admin: resolve(root, "admin.html"),
       },
     },
   },

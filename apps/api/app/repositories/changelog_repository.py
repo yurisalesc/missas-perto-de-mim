@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.changelog import ChangelogEntry
@@ -12,7 +12,11 @@ _FORTALEZA_TZ = ZoneInfo("America/Fortaleza")
 
 
 class ChangelogRepository:
-    """Repository abstraction for changelog operations."""
+    """Repository abstraction for changelog operations.
+
+    Mutating helpers used by admin update/delete flush only; callers commit.
+    ``create`` still commits for the simple create path.
+    """
 
     def __init__(self, db: Session):
         """Create repository with database session."""
@@ -38,6 +42,20 @@ class ChangelogRepository:
         result = self.db.execute(query)
         return list(result.scalars().all())
 
+    def list_page(self, *, page: int = 1, page_size: int = 25) -> tuple[list[ChangelogEntry], int]:
+        """Return a page of changelog entries sorted by most recent."""
+
+        total = int(self.db.execute(select(func.count()).select_from(ChangelogEntry)).scalar_one())
+        offset = max(page - 1, 0) * page_size
+        query = (
+            select(ChangelogEntry)
+            .order_by(ChangelogEntry.published_at.desc(), ChangelogEntry.id.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+        items = list(self.db.execute(query).scalars().all())
+        return items, total
+
     def create(self, entry: ChangelogEntry) -> ChangelogEntry:
         """Persist a new changelog entry."""
 
@@ -51,15 +69,16 @@ class ChangelogRepository:
 
         return self.db.get(ChangelogEntry, entry_id)
 
-    def update(self, entry: ChangelogEntry) -> ChangelogEntry:
-        """Persist updates for an existing changelog entry."""
+    def save(self, entry: ChangelogEntry) -> ChangelogEntry:
+        """Flush updates for an existing entry (caller commits)."""
 
-        self.db.commit()
+        self.db.add(entry)
+        self.db.flush()
         self.db.refresh(entry)
         return entry
 
     def delete(self, entry: ChangelogEntry) -> None:
-        """Delete an existing changelog entry."""
+        """Stage deletion of an entry (caller commits)."""
 
         self.db.delete(entry)
-        self.db.commit()
+        self.db.flush()
