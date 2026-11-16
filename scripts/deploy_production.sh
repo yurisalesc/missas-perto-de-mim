@@ -78,15 +78,23 @@ fi
 mkdir -p /var/www/missas "$WEB_TMP_DIR"
 VITE_BUILD_SCRIPT="$APP_DIR/scripts/vite_docker_build.sh"
 test -f "$VITE_BUILD_SCRIPT" || { echo "[deploy] Missing $VITE_BUILD_SCRIPT" >&2; exit 1; }
-chmod +x "$VITE_BUILD_SCRIPT"
-tar -C "$APP_DIR/apps/web" --exclude=node_modules --exclude=dist -cf - . \
+# Stage web sources + build script into one tar so Docker needs no bind mounts
+# (VPS Docker may reject host bind mounts with read-only filesystem errors).
+WEB_STAGE="$(mktemp -d)"
+cleanup_web_stage() { rm -rf "$WEB_STAGE"; }
+trap cleanup_web_stage EXIT
+cp -a "$APP_DIR/apps/web/." "$WEB_STAGE/"
+cp "$VITE_BUILD_SCRIPT" "$WEB_STAGE/vite_docker_build.sh"
+chmod +x "$WEB_STAGE/vite_docker_build.sh"
+tar -C "$WEB_STAGE" --exclude=node_modules --exclude=dist -cf - . \
   | docker run --rm -i \
       -e "VITE_PIX_COPIA_COLA=${VITE_PIX_COPIA_COLA:-}" \
       -e "VITE_API_BASE=/api" \
-      -v "$VITE_BUILD_SCRIPT:/vite_docker_build.sh:ro" \
       -w /app node:22-bookworm \
-      bash /vite_docker_build.sh \
+      bash -c "set -euo pipefail; tar -xf - -C /app; bash /app/vite_docker_build.sh" \
   | tar -C "$WEB_TMP_DIR" -xf -
+cleanup_web_stage
+trap - EXIT
 mkdir -p "$WEB_TMP_DIR/src"
 cp "$APP_DIR/apps/web/admin.html" "$WEB_TMP_DIR/admin.html"
 test -f "$WEB_TMP_DIR/doar.html" || { echo "[deploy] Missing doar.html in vite dist" >&2; exit 1; }
